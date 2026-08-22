@@ -1,0 +1,63 @@
+{
+  "name": "stickytodo",
+  "version": "2.0.0",
+  "description": "StickyTodo - A desktop sticky notes and todo sidebar app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir"
+  },
+  "keywords": [
+    "electron",
+    "sticky-notes",
+    "todos",
+    "sidebar"
+  ],
+  "author": "Jie_Sun孙胜杰",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "sql.js": "^1.14.2",
+    "vue": "^3.5.41"
+  },
+  "build": {
+    "appId": "com.stickytodo.app",
+    "productName": "StickyTodo",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "db.js",
+      "index.html",
+      "style.css",
+      "app.js",
+      "vue.global.prod.js",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "StickyTodo-Portable-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "StickyTodo-Portable-${version}.${ext}"
+    },
+    "asar": true,
+    "extraResources": []
+  }
+}
