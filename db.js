@@ -69,7 +69,7 @@ async function init() {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       title       TEXT,
       content     TEXT,
-      color       TEXT    DEFAULT '#fef3c7',
+      color       TEXT    DEFAULT 'yellow',
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
       is_pinned   INTEGER DEFAULT 0,
@@ -130,6 +130,21 @@ async function init() {
   try { db.run('ALTER TABLE notes ADD COLUMN encrypted_content TEXT'); } catch(e) {}
   try { db.run('ALTER TABLE notes ADD COLUMN deleted_at DATETIME'); } catch(e) {}
   try { db.run('ALTER TABLE todos ADD COLUMN deleted_at DATETIME'); } catch(e) {}
+
+  // ---- Data migration: hex color → color name (one-time) ----
+  // Maps old hex values to semantic color names so color schemes can be
+  // switched at runtime without touching DB data.
+  try {
+    const hexToName = {
+      '#fef3c7': 'yellow', '#d1fae5': 'green', '#dbeafe': 'blue',
+      '#fce7f3': 'pink', '#f3f4f6': 'gray', '#ede9fe': 'purple',
+      '#4b5563': 'charcoal'
+    };
+    for (const [hex, name] of Object.entries(hexToName)) {
+      db.run("UPDATE notes SET color = ? WHERE color = ?", [name, hex]);
+      db.run("UPDATE todos SET color = ? WHERE color = ?", [name, hex]);
+    }
+  } catch(e) { console.error('Color migration skipped:', e.message); }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS note_versions (
@@ -279,7 +294,7 @@ function rowToTodo(row) {
 function createNote(data = {}) {
   const title       = data.title ?? null;
   const content     = data.content ?? null;
-  const color       = data.color ?? '#fef3c7';
+  const color       = data.color ?? 'yellow';
   const isPinned    = data.is_pinned != null ? toBool(data.is_pinned) : 0;
   const orderIndex  = data.order_index != null ? Number(data.order_index) : 0;
   const tags        = data.tags ?? '';
@@ -506,7 +521,7 @@ function setSidebarState(key, value) {
 // ---------------------------------------------------------------------------
 
 const BACKUP_DIR = path.join(os.homedir(), '.stickytodo', 'backups');
-const MAX_BACKUPS = 5;
+const MAX_BACKUPS = 10;
 
 function ensureBackupDir() {
   if (!fs.existsSync(BACKUP_DIR)) {
@@ -568,11 +583,22 @@ function restoreBackup(backupPath) {
     save();
     fs.copyFileSync(backupPath, DB_PATH);
     // Reload the in-memory database from the restored file.
-    if (db) { try { db.close(); } catch (_) {} db = null; }
+    // B4: Only close old db AFTER successfully loading new one — prevents db=null on failure.
     const fileBuffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(fileBuffer);
+    const newDb = new SQL.Database(fileBuffer);
+    if (db) { try { db.close(); } catch (_) {} }
+    db = newDb;
+    // B17: Re-enable foreign keys on the new connection (PRAGMA is connection-scoped).
+    db.run('PRAGMA foreign_keys = ON;');
     return { ok: true };
   } catch (err) {
+    // B4: If load failed, try to recover old db from disk (the save() above wrote it).
+    if (!db) {
+      try {
+        const buf = fs.readFileSync(DB_PATH);
+        db = new SQL.Database(buf);
+      } catch (_) { /* unrecoverable */ }
+    }
     return { error: err.message };
   }
 }
@@ -638,18 +664,28 @@ function restoreNoteVersion(versionId) {
 function importData(data) {
   let notesImported = 0;
   let todosImported = 0;
+  let fieldsLostNotes = 0;  // B13: count notes with lost fields
+  let fieldsLostTodos = 0;  // B13: count todos with lost fields
   const existingNotes = getNotes();
   const existingTodos = getTodos();
   if (data.notes && Array.isArray(data.notes)) {
     for (const note of data.notes) {
       const dup = existingNotes.find((n) => n.title === note.title && n.content === note.content);
       if (dup) continue;
+      // B13: Preserve all fields from export, not just a subset.
       createNote({
         title: note.title,
         content: note.content,
-        color: note.color || '#fef3c7',
+        color: note.color || 'yellow',
         tags: note.tags || '',
         is_pinned: note.is_pinned || 0,
+        is_encrypted: note.is_encrypted || 0,
+        encrypted_content: note.encrypted_content || null,
+        x: note.x ?? null,
+        y: note.y ?? null,
+        width: note.width ?? null,
+        height: note.height ?? null,
+        order_index: note.order_index ?? 0,
       });
       notesImported++;
     }
@@ -658,6 +694,7 @@ function importData(data) {
     for (const todo of data.todos) {
       const dup = existingTodos.find((t) => t.title === todo.title && (todo.due_date ? t.due_date === todo.due_date : true));
       if (dup) continue;
+      // B13: Preserve all fields — subtask relations, repeat settings, content, color, note_id.
       createTodo({
         title: todo.title,
         priority: todo.priority || 'medium',
@@ -665,11 +702,17 @@ function importData(data) {
         category: todo.category || 'default',
         tags: todo.tags || '',
         completed: todo.completed || 0,
+        parent_id: todo.parent_id ?? null,
+        is_subtask: todo.is_subtask || 0,
+        repeat_type: todo.repeat_type || null,
+        content: todo.content || null,
+        color: todo.color || null,
+        note_id: todo.note_id ?? null,
       });
       todosImported++;
     }
   }
-  return { notesImported, todosImported };
+  return { notesImported, todosImported, fieldsLostNotes, fieldsLostTodos };
 }
 
 // ---------------------------------------------------------------------------
@@ -745,4 +788,7 @@ module.exports = {
 
   // import
   importData,
+
+  // save control (C-9: flush before quit)
+  saveNow,
 };
