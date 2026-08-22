@@ -26,12 +26,11 @@ const path = require('path');
 const zlib = require('zlib');
 
 // Global error handlers — write to a log file so we can diagnose silent exits
+// BUG-09: Use async appendFile to avoid blocking the main thread on slow I/O.
 const LOG_PATH = path.join(os.homedir(), '.stickytodo', 'main.log');
 function logError(msg) {
-  try {
-    const ts = new Date().toISOString();
-    fs.appendFileSync(LOG_PATH, `[${ts}] ${msg}\n`);
-  } catch (_) { /* swallow */ }
+  const ts = new Date().toISOString();
+  fs.appendFile(LOG_PATH, `[${ts}] ${msg}\n`, () => {});
 }
 
 process.on('uncaughtException', (err) => {
@@ -772,7 +771,14 @@ function registerIpcHandlers() {
     const noteTitle = noteData.title || 'Note';
     const noteContent = noteData.content || '';
     const noteColor = noteData.color || '#fef3c7';
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:${noteColor};padding:20px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6}.note-title{font-size:18px;font-weight:bold;margin-bottom:10px}.note-body{word-wrap:break-word;overflow:hidden}.note-body img{max-width:100%;height:auto}.note-body ul,.note-body ol{padding-left:20px}.note-body pre{background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto}.note-body table{border-collapse:collapse;width:100%}.note-body th,.note-body td{border:1px solid #ddd;padding:6px 8px}.note-body blockquote{border-left:3px solid #ddd;padding-left:12px;color:#666}.note-body hr{border:none;border-top:1px solid #ddd;margin:12px 0}</style></head><body><div class="note-title">${noteTitle.replace(/</g,'&lt;')}</div><div class="note-body">${noteContent}</div></body></html>`;
+    // BUG-03: Escape HTML entities in noteContent to prevent XSS in the offscreen export window.
+    const safeContent = noteContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    // Re-allow safe formatting tags by un-escaping only approved tags.
+    const allowedBody = safeContent
+      .replace(/&lt;(\/?)(b|i|u|s|strong|em|br|hr|ul|ol|li|p|div|span|img|a|pre|code|table|thead|tbody|tr|th|td|blockquote|h[1-6])\b([^&]*?)&gt;/gi, '<$1$2$3>')
+      .replace(/&lt;img\b/g, '<img')
+      .replace(/&lt;a\b/g, '<a');
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:${noteColor};padding:20px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6}.note-title{font-size:18px;font-weight:bold;margin-bottom:10px}.note-body{word-wrap:break-word;overflow:hidden}.note-body img{max-width:100%;height:auto}.note-body ul,.note-body ol{padding-left:20px}.note-body pre{background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto}.note-body table{border-collapse:collapse;width:100%}.note-body th,.note-body td{border:1px solid #ddd;padding:6px 8px}.note-body blockquote{border-left:3px solid #ddd;padding-left:12px;color:#666}.note-body hr{border:none;border-top:1px solid #ddd;margin:12px 0}</style></head><body><div class="note-title">${noteTitle.replace(/</g,'&lt;')}</div><div class="note-body">${allowedBody}</div></body></html>`;
     const exportWin = new BrowserWindow({
       width: 400,
       height: 500,
@@ -950,13 +956,14 @@ if (!gotTheLock) {
       }
 
       // Repeat task reset: check completed repeating todos
+      // OPT-04: Reuse the same todos array from above instead of querying again.
       try {
-        const allTodos = db.getTodos();
-        const now = new Date();
-        for (const todo of allTodos) {
+        const now2 = new Date();
+        for (const todo of todos) {
           if (!todo.repeat_type || !todo.completed || !todo.last_completed_at) continue;
-          const lastCompleted = new Date(todo.last_completed_at + 'Z');
-          const elapsedMs = now.getTime() - lastCompleted.getTime();
+          // BUG-08: Use local time consistently — don't force UTC with +'Z' on last_completed_at.
+          const lastCompleted = new Date(todo.last_completed_at);
+          const elapsedMs = now2.getTime() - lastCompleted.getTime();
           const elapsedHours = elapsedMs / (1000 * 60 * 60);
           let shouldReset = false;
           if (todo.repeat_type === 'daily' && elapsedHours > 24) shouldReset = true;

@@ -562,8 +562,15 @@ function listBackups() {
 function restoreBackup(backupPath) {
   if (!backupPath || !fs.existsSync(backupPath)) return { error: 'backup file not found' };
   try {
+    // BUG-07: Cancel pending save timer, flush current state, then overwrite with backup.
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    saveFirstPendingAt = 0;
     save();
     fs.copyFileSync(backupPath, DB_PATH);
+    // Reload the in-memory database from the restored file.
+    if (db) { try { db.close(); } catch (_) {} db = null; }
+    const fileBuffer = fs.readFileSync(DB_PATH);
+    db = new SQL.Database(fileBuffer);
     return { ok: true };
   } catch (err) {
     return { error: err.message };

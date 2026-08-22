@@ -30,6 +30,25 @@ const COLOR_MAP = {
 };
 const getColorName = (color) => COLOR_MAP[color] || 'yellow';
 
+// Module-level HTML sanitizer — SEC-01: improved to block SVG/onload, inline style, data: URLs.
+// Used by NoteList, NoteEditor version preview, and AllView.
+const sanitizeHtmlGlobal = (html) => {
+  if (!html) return '';
+  return String(html)
+    // Strip dangerous tags entirely (including SVG which can carry onload)
+    .replace(/<(script|iframe|object|embed|style|svg|math|link|meta|base|form)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<(script|iframe|object|embed|style|svg|math|link|meta|base|form)\b[^>]*\/?>/gi, '')
+    // Strip all on* event handlers (including /onload without preceding space)
+    .replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\bon\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    // Block javascript: and data: URLs in href/src
+    .replace(/(href|src)\s*=\s*["']javascript:[^"']*["']/gi, '$1="#"')
+    .replace(/(href|src)\s*=\s*["']data:text\/html[^"']*["']/gi, '$1="#"')
+    // Strip inline style attributes that could carry url(javascript:...)
+    .replace(/\s+style\s*=\s*("[^"]*"|'[^']*')/gi, '')
+    ;
+};
+
 const I18N = {
   zh: {
     tabNotes: '便笺', tabTodos: '待办', tabAll: '全部',
@@ -1063,7 +1082,7 @@ const NoteEditor = {
             </div>
           </div>
           <div v-if="previewVersionData" class="version-preview">
-            <div class="version-preview-content" v-html="previewVersionData.content"></div>
+            <div class="version-preview-content" v-html="sanitizeVersionContent(previewVersionData.content)"></div>
           </div>
         </div>
       </div>
@@ -1107,6 +1126,8 @@ const NoteEditor = {
     const showVersions = ref(false);
     const versions = ref([]);
     const previewVersionData = ref(null);
+    // BUG-04: Sanitize version preview content before rendering to prevent XSS.
+    const sanitizeVersionContent = (content) => sanitizeHtmlGlobal(content);
     let recognition = null;
     
     const execFormat = (command) => {
@@ -2099,6 +2120,7 @@ const NoteEditor = {
       showVersions,
       versions,
       previewVersionData,
+      sanitizeVersionContent,
       showVersionHistory,
       previewVersion,
       restoreVersion,
@@ -2266,25 +2288,24 @@ const NoteList = {
 
     const highlightContent = (html) => {
       if (!html || !props.searchQuery) return sanitizeHtml(html);
-      const stripped = html.replace(/<[^>]*>/g, '');
+      // BUG-01: Only highlight in text nodes, not inside HTML tags.
+      // Split by tags, highlight only text segments, then rejoin.
+      const safe = sanitizeHtml(html);
       const escaped = props.searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escaped})`, 'gi');
-      if (!regex.test(stripped)) return sanitizeHtml(html);
-      const safe = sanitizeHtml(html);
-      return safe.replace(regex, '<mark class="search-match">$1</mark>');
+      // Split into tag and text segments
+      const segments = safe.split(/(<[^>]*>)/g);
+      const result = segments.map((seg) => {
+        if (seg.startsWith('<') && seg.endsWith('>')) return seg; // tag — skip
+        return seg.replace(regex, '<mark class="search-match">$1</mark>');
+      });
+      return result.join('');
     };
 
     // getColorName + COLOR_MAP are now module-level (shared with App floating view)
 
     
-    const sanitizeHtml = (html) => {
-      if (!html) return '';
-      return String(html)
-        .replace(/<(script|iframe|object|embed|style)[\s\S]*?<\/\1>/gi, '')
-        .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-        .replace(/(href|src)\s*=\s*["']javascript:[^"']*["']/gi, '$1="#"')
-        ;
-    };
+    const sanitizeHtml = sanitizeHtmlGlobal; // SEC-01: use module-level improved sanitizer
     
     const sortedNotes = computed(() => {
       let result = [...props.notes];
@@ -3113,12 +3134,16 @@ const AllView = {
       const fromId = draggedId.value;
       if (!fromId || fromId === targetItem.uniqueId) { draggedId.value = null; return; }
 
-      // Reorder: swap order_index values
+      // BUG-02: Swap both items' order_index to avoid duplicates.
       try {
         const fromApi = fromId.startsWith('note-') ? window.electronAPI.notes : window.electronAPI.todos;
-        const toApi = targetItem.type === 'note' ? window.electronAPI.notes : window.electronAPI.todos;
         const fromRealId = Number(fromId.replace(/^(note|todo)-/, ''));
+        const fromItem = allItems.value.find((i) => i.uniqueId === fromId);
+        if (!fromItem) { draggedId.value = null; return; }
+        // Swap: source gets target's order_index, target gets source's order_index
+        const toApi = targetItem.type === 'note' ? window.electronAPI.notes : window.electronAPI.todos;
         await fromApi.update(fromRealId, { order_index: targetItem.order_index });
+        await toApi.update(targetItem.id, { order_index: fromItem.order_index });
         emit('refresh');
       } catch (err) {
         console.error('Reorder failed:', err);
@@ -4022,7 +4047,10 @@ const App = {
       selectedIds.value = newSet;
     };
     const selectAll = () => {
-      const items = currentTab.value === 'notes' ? notes.value : todos.value;
+      // BUG-10: Select only items not archived (visible items), not all DB records.
+      const items = currentTab.value === 'notes'
+        ? notes.value.filter((n) => n.is_archived !== 1 && n.deleted_at == null)
+        : todos.value.filter((t) => t.is_archived !== 1 && t.deleted_at == null && !t.is_subtask);
       selectedIds.value = new Set(items.map((i) => i.id));
     };
     const batchDelete = async () => {
@@ -4269,14 +4297,15 @@ const App = {
         console.error('Failed to load sidebar state:', error);
       }
 
-      await loadNotes();
-      await loadTodos();
+      await Promise.all([loadNotes(), loadTodos()]);
 
       // Listen for data:changed events from floating windows closing — refresh lists.
+      // OPT-03: Debounce to avoid redundant reloads when multiple windows close.
+      let dataChangedTimer = null;
       if (window.electronAPI.data && window.electronAPI.data.onChanged) {
         window.electronAPI.data.onChanged(() => {
-          loadNotes();
-          loadTodos();
+          if (dataChangedTimer) clearTimeout(dataChangedTimer);
+          dataChangedTimer = setTimeout(() => { loadNotes(); loadTodos(); }, 200);
         });
       }
 
@@ -4335,8 +4364,8 @@ const App = {
 
     // Refresh both notes and todos — used by AllView for real-time updates.
     const loadAll = async () => {
-      await loadNotes();
-      await loadTodos();
+      // OPT-01: Load notes and todos in parallel for faster refresh.
+      await Promise.all([loadNotes(), loadTodos()]);
     };
 
     const floatingEditorContent = ref(null);
@@ -4402,9 +4431,15 @@ const App = {
     };
 
     const onFloatingContentDrop = (e) => {
-      e.preventDefault();
+      // BUG-05: Only preventDefault if there are image files; let non-image drops use default behavior.
       const files = e.dataTransfer?.files;
       if (!files || !files.length) return;
+      let hasImage = false;
+      for (const file of files) {
+        if (file.type.startsWith('image/')) { hasImage = true; break; }
+      }
+      if (!hasImage) return; // Let browser handle non-image drops
+      e.preventDefault();
       for (const file of files) {
         if (file.type.startsWith('image/')) {
           insertImageFileToFloating(file);
@@ -4608,13 +4643,22 @@ const App = {
 
     // Create a new todo and open it in an independent window.
     const createTodoInWindow = async () => {
+      let newTodo = null;
       try {
-        const newTodo = await window.electronAPI.todos.create({ title: '', note_id: null });
+        newTodo = await window.electronAPI.todos.create({ title: '', note_id: null });
         if (newTodo && newTodo.id) {
-          await window.electronAPI.floatingTodo.create(newTodo.id, { alwaysOnTop: false });
+          const res = await window.electronAPI.floatingTodo.create(newTodo.id, { alwaysOnTop: false });
+          if (res && res.error) {
+            // BUG-06: Window failed to open — clean up the ghost record.
+            await window.electronAPI.todos.delete(newTodo.id);
+          }
         }
       } catch (e) {
         console.error('createTodoInWindow failed:', e);
+        // BUG-06: Clean up ghost record on exception.
+        if (newTodo && newTodo.id) {
+          try { await window.electronAPI.todos.delete(newTodo.id); } catch (_) {}
+        }
       }
     };
 
@@ -4747,14 +4791,22 @@ const App = {
     const showNoteAddMenu = ref(false);
     const showTodoAddMenu = ref(false);
     const createNoteInWindow = async () => {
+      let newNote = null;
       try {
-        const newNote = await window.electronAPI.notes.create({ title: '', content: '', color: '#fef3c7' });
+        newNote = await window.electronAPI.notes.create({ title: '', content: '', color: '#fef3c7' });
         if (newNote && newNote.id) {
-          await window.electronAPI.floatingNote.create(newNote.id, { alwaysOnTop: false });
+          const res = await window.electronAPI.floatingNote.create(newNote.id, { alwaysOnTop: false });
+          if (res && res.error) {
+            // BUG-06: Window failed to open — clean up the ghost record.
+            await window.electronAPI.notes.delete(newNote.id);
+          }
           loadNotes();
         }
       } catch (e) {
         console.error('createNoteInWindow failed:', e);
+        if (newNote && newNote.id) {
+          try { await window.electronAPI.notes.delete(newNote.id); } catch (_) {}
+        }
       }
     };
 
