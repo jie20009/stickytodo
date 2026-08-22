@@ -8,27 +8,37 @@ const { createApp, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } 
 // Note Colors
 // ============================================
 const NOTE_COLORS = [
-  { value: '#fef3c7', key: 'colorYellow' },
-  { value: '#d1fae5', key: 'colorGreen' },
-  { value: '#dbeafe', key: 'colorBlue' },
-  { value: '#fce7f3', key: 'colorPink' },
-  { value: '#f3f4f6', key: 'colorGray' },
-  { value: '#ede9fe', key: 'colorPurple' },
-  { value: '#4b5563', key: 'colorCharcoal' }
+  { value: 'yellow',   key: 'colorYellow' },
+  { value: 'green',    key: 'colorGreen' },
+  { value: 'blue',     key: 'colorBlue' },
+  { value: 'pink',     key: 'colorPink' },
+  { value: 'gray',     key: 'colorGray' },
+  { value: 'purple',   key: 'colorPurple' },
+  { value: 'charcoal', key: 'colorCharcoal' }
 ];
 
-// Module-level color map so every component (NoteList, App floating view, etc.)
-// can resolve a note's hex color to a stable CSS class name without redefining it.
-const COLOR_MAP = {
-  '#fef3c7': 'yellow',
-  '#d1fae5': 'green',
-  '#dbeafe': 'blue',
-  '#fce7f3': 'pink',
-  '#f3f4f6': 'gray',
-  '#ede9fe': 'purple',
+// Color scheme definitions — each maps color names to CSS variable references.
+// The actual hex values are defined in style.css under [data-color-scheme="..."].
+const COLOR_SCHEMES = [
+  { id: 'default',  key: 'schemeDefault' },
+  { id: 'windows',  key: 'schemeWindows' },
+  { id: 'morandi',  key: 'schemeMorandi' }
+];
+
+// getColorName: DB now stores color names directly (e.g. 'yellow').
+// For backward compat, old hex values are mapped to names.
+const HEX_TO_NAME = {
+  '#fef3c7': 'yellow', '#d1fae5': 'green', '#dbeafe': 'blue',
+  '#fce7f3': 'pink', '#f3f4f6': 'gray', '#ede9fe': 'purple',
   '#4b5563': 'charcoal'
 };
-const getColorName = (color) => COLOR_MAP[color] || 'yellow';
+const getColorName = (color) => {
+  if (!color) return 'yellow';
+  // Already a name? Return as-is.
+  if (['yellow','green','blue','pink','gray','purple','charcoal'].includes(color)) return color;
+  // Legacy hex? Map to name.
+  return HEX_TO_NAME[color] || 'yellow';
+};
 
 // Module-level HTML sanitizer — SEC-01: improved to block SVG/onload, inline style, data: URLs.
 // Used by NoteList, NoteEditor version preview, and AllView.
@@ -77,7 +87,7 @@ const I18N = {
     reminderSoon: '即将到期', reminderDismiss: '知道了', reminderDueOn: '到期时间',
     backup: '数据备份', backupNow: '立即备份', backupList: '备份列表', backupRestore: '恢复', backupDelete: '删除备份',
     backupConfirmRestore: '恢复会重启应用，确定？', backupConfirmDelete: '确定删除这个备份？',
-    backupAuto: '已开启自动备份（每30分钟）', backupSize: '大小', backupDate: '日期',
+    backupAuto: '已开启自动备份（每4小时）', backupSize: '大小', backupDate: '日期',
     dragToReorder: '拖动重新排序',
     tags: '标签', addTag: '添加标签', allTags: '全部标签', tagPlaceholder: '输入标签...', noTags: '暂无标签',
     subtasks: '子任务', addSubtask: '添加子任务', subtaskProgress: '完成 {done}/{total}', noSubtasks: '暂无子任务', subtaskPlaceholder: '子任务标题...',
@@ -106,6 +116,8 @@ const I18N = {
     shareImage: '分享为图片', imageSaved: '图片已保存',
     timelineEmpty: '暂无动态', tlNoteCreated: '便笺创建', tlNoteUpdated: '便笺更新', tlTodoCreated: '待办创建', tlTodoCompleted: '待办完成',
     importData: '导入数据', importSelect: '选择文件', importResult: '导入完成', importError: '导入失败',
+    toggleTodo: '切换完成', undoDeleteFailed: '项目已永久删除，无法恢复',
+    colorScheme: '配色方案', schemeDefault: '经典浅色', schemeWindows: 'Windows 便笺', schemeMorandi: '莫兰迪柔和',
 
   },
   en: {
@@ -135,7 +147,7 @@ const I18N = {
     reminderSoon: 'Due soon', reminderDismiss: 'Got it', reminderDueOn: 'Due on',
     backup: 'Backup', backupNow: 'Backup now', backupList: 'Backup list', backupRestore: 'Restore', backupDelete: 'Delete backup',
     backupConfirmRestore: 'This will restart the app. Continue?', backupConfirmDelete: 'Delete this backup?',
-    backupAuto: 'Auto-backup enabled (every 30 min)', backupSize: 'Size', backupDate: 'Date',
+    backupAuto: 'Auto-backup enabled (every 4 hours)', backupSize: 'Size', backupDate: 'Date',
     dragToReorder: 'Drag to reorder',
     tags: 'Tags', addTag: 'Add tag', allTags: 'All tags', tagPlaceholder: 'Enter tag...', noTags: 'No tags',
     subtasks: 'Subtasks', addSubtask: 'Add subtask', subtaskProgress: '{done}/{total} done', noSubtasks: 'No subtasks', subtaskPlaceholder: 'Subtask title...',
@@ -164,6 +176,8 @@ const I18N = {
     shareImage: 'Share as image', imageSaved: 'Image saved',
     timelineEmpty: 'No activity', tlNoteCreated: 'Note created', tlNoteUpdated: 'Note updated', tlTodoCreated: 'Todo created', tlTodoCompleted: 'Todo completed',
     importData: 'Import data', importSelect: 'Select file', importResult: 'Import complete', importError: 'Import failed',
+    toggleTodo: 'Toggle complete', undoDeleteFailed: 'Item permanently deleted, cannot be restored',
+    colorScheme: 'Color scheme', schemeDefault: 'Classic Light', schemeWindows: 'Windows Sticky Notes', schemeMorandi: 'Morandi Soft',
 
   },
   vi: {
@@ -193,7 +207,7 @@ const I18N = {
     reminderSoon: 'Sắp đến hạn', reminderDismiss: 'Đã biết', reminderDueOn: 'Hạn chót',
     backup: 'Sao lưu', backupNow: 'Sao lưu ngay', backupList: 'Danh sách sao lưu', backupRestore: 'Khôi phục', backupDelete: 'Xóa sao lưu',
     backupConfirmRestore: 'Khôi phục sẽ khởi động lại ứng dụng. Tiếp tục?', backupConfirmDelete: 'Xóa sao lưu này?',
-    backupAuto: 'Tự động sao lưu (mỗi 30 phút)', backupSize: 'Kích thước', backupDate: 'Ngày',
+    backupAuto: 'Tự động sao lưu (mỗi 4 giờ)', backupSize: 'Kích thước', backupDate: 'Ngày',
     dragToReorder: 'Kéo để sắp xếp',
     tags: 'Thẻ', addTag: 'Thêm thẻ', allTags: 'Tất cả thẻ', tagPlaceholder: 'Nhập thẻ...', noTags: 'Không có thẻ',
     subtasks: 'Công việc con', addSubtask: 'Thêm việc con', subtaskProgress: 'Hoàn thành {done}/{total}', noSubtasks: 'Không có việc con', subtaskPlaceholder: 'Tiêu đề việc con...',
@@ -222,6 +236,8 @@ const I18N = {
     shareImage: 'Chia sẻ dạng ảnh', imageSaved: 'Đã lưu ảnh',
     timelineEmpty: 'Không có hoạt động', tlNoteCreated: 'Ghi chú đã tạo', tlNoteUpdated: 'Ghi chú đã cập nhật', tlTodoCreated: 'Việc đã tạo', tlTodoCompleted: 'Việc đã hoàn thành',
     importData: 'Nhập dữ liệu', importSelect: 'Chọn tệp', importResult: 'Nhập hoàn thành', importError: 'Nhập thất bại',
+    toggleTodo: 'Chuyển hoàn thành', undoDeleteFailed: 'Mục đã xóa vĩnh viễn, không thể khôi phục',
+    colorScheme: 'Bảng màu', schemeDefault: 'Kinh điển sáng', schemeWindows: 'Windows Sticky Notes', schemeMorandi: 'Morandi dịu',
 
   }
 };
@@ -493,7 +509,10 @@ const TodoList = {
         <template v-for="todo in group.items" :key="todo.id">
         <div 
           class="todo-item"
-          :class="{ completed: todo.completed, dragging: draggedTodoId === todo.id, 'drag-over': dragOverTodoId === todo.id }"
+          :class="[
+            { completed: todo.completed, dragging: draggedTodoId === todo.id, 'drag-over': dragOverTodoId === todo.id },
+            todo.color ? ['color-' + getColorName(todo.color)] : []
+          ]"
           draggable="true"
           @dragstart="onDragStart($event, todo)"
           @dragover.prevent="onDragOver($event, todo)"
@@ -681,9 +700,11 @@ const TodoList = {
 
     const highlightText = (text) => {
       if (!text || !props.searchQuery) return text || '';
+      // O9: HTML-escape text first to prevent XSS via v-html, then highlight.
+      const escText = String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const escaped = props.searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escaped})`, 'gi');
-      return text.replace(regex, '<mark class="search-match">$1</mark>');
+      return escText.replace(regex, '<mark class="search-match">$1</mark>');
     };
 
     const formatDate = (dateStr) => {
@@ -884,6 +905,7 @@ const TodoList = {
       getSubtasksFor,
       subtaskProgress,
       splitTags,
+      getColorName,
       t
     };
   }
@@ -908,7 +930,7 @@ const NoteEditor = {
           <button class="toolbar-btn" @click="execFormat('underline')" :title="t('underline')"><u>U</u></button>
           <button class="toolbar-btn" @click="execFormat('strikeThrough')" :title="t('strikethrough')"><s>S</s></button>
           <button class="toolbar-btn" @click="execFormat('insertUnorderedList')" :title="t('list')">•━</button>
-          <button class="toolbar-btn" @click="pickImage" :title="t('insertImage')">🖼</button>
+          <button class="toolbar-btn" @click="pickImage" :title="t('insertImage')"><span class="icon-image"></span></button>
           <span class="toolbar-divider" v-if="selectedImg"></span>
           <button class="toolbar-btn" v-if="selectedImg" @click="resizeSelectedImage(-20)" :title="t('shrinkImage')">◀</button>
           <button class="toolbar-btn" v-if="selectedImg" @click="resetSelectedImageSize" :title="t('resetImageSize')">⤢</button>
@@ -1009,7 +1031,7 @@ const NoteEditor = {
                 :key="color.value"
                 class="color-option"
                 :class="{ selected: selectedColor === color.value }"
-                :style="{ backgroundColor: color.value }"
+                :style="{ backgroundColor: 'var(--color-note-' + color.value + ')' }"
                 @click="selectedColor = color.value"
                 :title="t(color.key)"
               ></div>
@@ -1236,9 +1258,11 @@ const NoteEditor = {
           let updated = html;
           for (const m of wikiMatches) {
             const noteTitle = m[1];
+            // app-C-05: HTML-escape noteTitle before inserting into attributes/text to prevent XSS
+            const escTitle = noteTitle.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
             const escaped = m[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const re = new RegExp(escaped, 'g');
-            updated = updated.replace(re, '<a class="wiki-link" data-note-title="' + noteTitle + '">' + noteTitle + '</a>');
+            updated = updated.replace(re, '<a class="wiki-link" data-note-title="' + escTitle + '">' + escTitle + '</a>');
           }
           editorContent.value.innerHTML = updated;
           content.value = editorContent.value.innerHTML;
@@ -1298,7 +1322,7 @@ const NoteEditor = {
       { key: 'hr', icon: '—', label: t('slashHr'), tag: 'hr' },
       { key: 'table', icon: '⊞', label: t('slashTable'), tag: 'table' },
       { key: 'link', icon: '🔗', label: t('slashLink'), tag: 'a' },
-      { key: 'image', icon: '🖼', label: t('slashImage'), tag: 'img' },
+          { key: 'image', icon: '📷', label: t('slashImage'), tag: 'img' },
       { key: 'date', icon: '📅', label: t('slashDate'), tag: 'date' },
       { key: 'time', icon: '⏰', label: t('slashTime'), tag: 'time' }
     ]);
@@ -1989,7 +2013,7 @@ const NoteEditor = {
       if (props.note) {
         title.value = props.note.title || '';
         content.value = props.note.content || '';
-        selectedColor.value = props.note.color || NOTE_COLORS[0].value;
+        selectedColor.value = getColorName(props.note.color);
         isPinned.value = props.note.is_pinned || false;
         tagsArray.value = (props.note.tags || '').split(',').map((t) => t.trim()).filter(Boolean);
         isEncrypted.value = props.note.is_encrypted === 1;
@@ -2030,7 +2054,8 @@ const NoteEditor = {
 
       const noteData = {
         title: title.value.trim(),
-        content: content.value.trim(),
+        // R2-04: When encrypted, store placeholder in content — plaintext lives only in encrypted_content.
+        content: isEncrypted.value ? '🔒 ' + t('encrypted') : content.value.trim(),
         color: selectedColor.value,
         is_pinned: isPinned.value,
         tags: tagsArray.value.join(','),
@@ -2281,9 +2306,11 @@ const NoteList = {
 
     const highlightText = (text) => {
       if (!text || !props.searchQuery) return text || '';
+      // O9: HTML-escape text first to prevent XSS via v-html, then highlight.
+      const escText = String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const escaped = props.searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escaped})`, 'gi');
-      return text.replace(regex, '<mark class="search-match">$1</mark>');
+      return escText.replace(regex, '<mark class="search-match">$1</mark>');
     };
 
     const highlightContent = (html) => {
@@ -2413,9 +2440,29 @@ const NoteList = {
       }
     };
     
+    // R2-11: Build backlink map once per notes change (O(N²) once) instead of
+    // per-render per-note (O(N²) × render count).
+    const backlinkMap = computed(() => {
+      const map = {};
+      for (const n of props.notes) {
+        if (!n.title) continue;
+        map[n.id] = 0;
+      }
+      for (const n of props.notes) {
+        if (!n.content) continue;
+        for (const other of props.notes) {
+          if (other.id === n.id || !other.title) continue;
+          if (n.content.includes('data-note-title="' + other.title + '"')) {
+            map[other.id] = (map[other.id] || 0) + 1;
+          }
+        }
+      }
+      return map;
+    });
+
     const getBacklinkCount = (note) => {
       if (!note || !note.title) return 0;
-      return props.notes.filter((n) => n.id !== note.id && (n.content || '').includes('data-note-title="' + note.title + '"')).length;
+      return backlinkMap.value[note.id] || 0;
     };
 
     return {
@@ -2890,7 +2937,11 @@ const AllView = {
         v-for="item in allItems"
         :key="item.type + '-' + item.id"
         class="all-item"
-        :class="['all-item-' + item.type, { dragging: draggedId === item.uniqueId, 'drag-over': dragOverId === item.uniqueId }]"
+        :class="[
+          'all-item-' + item.type,
+          { dragging: draggedId === item.uniqueId, 'drag-over': dragOverId === item.uniqueId },
+          item.type === 'note' ? ['color-' + getColorName(item.color)] : (item.color ? ['color-' + getColorName(item.color)] : [])
+        ]"
         draggable="true"
         @dragstart="onDragStart($event, item)"
         @dragover.prevent="onDragOver($event, item)"
@@ -2920,15 +2971,15 @@ const AllView = {
     </div>
 
     <!-- Right-click context menu -->
-    <div v-if="contextMenu.visible" class="context-menu" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }" @mouseleave="contextMenu.visible = false">
+    <div v-if="contextMenu.visible" class="context-menu" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }" @mouseleave="contextMenu.visible = false" @click.stop>
       <button class="ctx-item" @click="ctxAction('popOut')">🪟 {{ t('popOutNote') }}</button>
       <button class="ctx-item" @click="ctxAction('edit')">✎ {{ t('edit') }}</button>
       <div class="ctx-sep"></div>
       <button v-if="contextMenu.item && contextMenu.item.type === 'todo'" class="ctx-item" @click="ctxAction('toggle')">✓ {{ t('toggleTodo') }}</button>
       <button class="ctx-item" @click="ctxAction('duplicate')">⧉ {{ t('duplicateNote') }}</button>
-      <button v-if="contextMenu.item && contextMenu.item.type === 'note'" class="ctx-item" @click="ctxAction('color')">🎨 {{ t('color') }}</button>
+      <button class="ctx-item" @click="ctxAction('color')">🎨 {{ t('color') }}</button>
       <div v-if="contextMenu.showColors" class="ctx-color-row">
-        <div v-for="c in NOTE_COLORS" :key="c.value" class="ctx-color-dot" :style="{ backgroundColor: c.value }" @click="ctxChangeColor(c.value)"></div>
+        <div v-for="c in NOTE_COLORS" :key="c.value" class="ctx-color-dot" :style="{ backgroundColor: 'var(--color-note-' + c.value + ')' }" @click="ctxChangeColor(c.value)"></div>
       </div>
       <button v-if="contextMenu.item && contextMenu.item.type === 'todo'" class="ctx-item" @click="ctxAction('date')">📅 {{ t('dueDate') }}</button>
       <div class="ctx-sep"></div>
@@ -2946,7 +2997,7 @@ const AllView = {
     filter: { type: String, default: 'all' },
   },
 
-  emits: ['edit-note', 'edit-todo', 'pop-out', 'delete-item', 'duplicate-item', 'archive-item', 'refresh'],
+  emits: ['pop-out', 'delete-item', 'duplicate-item', 'archive-item', 'refresh', 'edit-in-sidebar'],
 
   setup(props, { emit }) {
     const draggedId = ref(null);
@@ -2988,11 +3039,6 @@ const AllView = {
       return combined;
     });
 
-    const onClick = (item) => {
-      if (item.type === 'note') emit('edit-note', item);
-      else emit('edit-todo', item);
-    };
-
     const popOut = (item) => {
       emit('pop-out', item);
     };
@@ -3014,14 +3060,14 @@ const AllView = {
           const dup = await window.electronAPI.notes.create({
             title: (item.title || '') + ' ' + t('duplicateSuffix'),
             content: item.content || '',
-            color: item.color || '#fef3c7',
+            color: getColorName(item.color),
           });
         } else {
           await window.electronAPI.todos.create({
             title: (item.title || '') + ' ' + t('duplicateSuffix'),
             priority: item.priority || 'medium',
             due_date: item.due_date || null,
-            content: item.content || null,
+            content: item.content || null,  // R3-09: preserve content field
           });
         }
         emit('refresh');
@@ -3059,7 +3105,7 @@ const AllView = {
       contextMenu.value.visible = false;
       switch (action) {
         case 'popOut': popOut(item); break;
-        case 'edit': emit(item.type === 'note' ? 'edit-note' : 'edit-todo', item); break;
+        case 'edit': emit('edit-in-sidebar', item); break;
         case 'toggle': toggleTodoComplete(item); break;
         case 'duplicate': onDuplicate(item); break;
         case 'color': contextMenu.value.visible = true; contextMenu.value.showColors = true; break;
@@ -3072,7 +3118,11 @@ const AllView = {
     const ctxChangeColor = async (color) => {
       const item = contextMenu.value.item;
       if (!item) return;
-      try { await window.electronAPI.notes.update(item.id, { color }); emit('refresh'); } catch (e) {}
+      try {
+        const api = item.type === 'note' ? window.electronAPI.notes : window.electronAPI.todos;
+        await api.update(item.id, { color });
+        emit('refresh');
+      } catch (e) { console.error('Change color failed:', e); }
       contextMenu.value = { visible: false, x: 0, y: 0, item: null, showColors: false, showDate: false };
     };
 
@@ -3085,9 +3135,14 @@ const AllView = {
 
     const highlightText = (text) => {
       if (!text || !props.searchQuery) return text || '';
+      // R3-06: Escape HTML first to prevent injection via v-html, then highlight
+      const escapedHtml = String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
       const escaped = props.searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escaped})`, 'gi');
-      return text.replace(regex, '<mark class="search-match">$1</mark>');
+      return escapedHtml.replace(regex, '<mark class="search-match">$1</mark>');
     };
 
     // Strip HTML tags and truncate for a one-line content preview.
@@ -3134,17 +3189,21 @@ const AllView = {
       const fromId = draggedId.value;
       if (!fromId || fromId === targetItem.uniqueId) { draggedId.value = null; return; }
 
-      // BUG-02: Swap both items' order_index to avoid duplicates.
+      const fromItem = allItems.value.find((i) => i.uniqueId === fromId);
+      if (!fromItem) { draggedId.value = null; return; }
+
+      // R2-02: Cross-type drops don't swap order_index (independent sequences).
+      // Same-type drops swap order_index for reordering.
       try {
-        const fromApi = fromId.startsWith('note-') ? window.electronAPI.notes : window.electronAPI.todos;
-        const fromRealId = Number(fromId.replace(/^(note|todo)-/, ''));
-        const fromItem = allItems.value.find((i) => i.uniqueId === fromId);
-        if (!fromItem) { draggedId.value = null; return; }
-        // Swap: source gets target's order_index, target gets source's order_index
-        const toApi = targetItem.type === 'note' ? window.electronAPI.notes : window.electronAPI.todos;
-        await fromApi.update(fromRealId, { order_index: targetItem.order_index });
-        await toApi.update(targetItem.id, { order_index: fromItem.order_index });
-        emit('refresh');
+        if (fromItem.type !== targetItem.type) {
+          // Cross-type: no reorder, just refresh (user can use 📌 to pop out)
+          emit('refresh');
+        } else {
+          const api = fromItem.type === 'note' ? window.electronAPI.notes : window.electronAPI.todos;
+          await api.update(fromItem.id, { order_index: targetItem.order_index });
+          await api.update(targetItem.id, { order_index: fromItem.order_index });
+          emit('refresh');
+        }
       } catch (err) {
         console.error('Reorder failed:', err);
       }
@@ -3159,7 +3218,7 @@ const AllView = {
       }
     };
 
-    return { allItems, draggedId, dragOverId, t, onClick, popOut, onDelete, onDuplicate, onArchive, toggleTodoComplete, getContentPreview, highlightText, getPriorityLabel, formatDate, onDragStart, onDragOver, onDrop, onDragEnd, contextMenu, ctxDatePicker, onContextMenu, ctxAction, ctxChangeColor, ctxSetDate, NOTE_COLORS };
+    return { allItems, draggedId, dragOverId, t, popOut, onDelete, onDuplicate, onArchive, toggleTodoComplete, getContentPreview, highlightText, getPriorityLabel, formatDate, getColorName, onDragStart, onDragOver, onDrop, onDragEnd, contextMenu, ctxDatePicker, onContextMenu, ctxAction, ctxChangeColor, ctxSetDate, NOTE_COLORS };
   }
 };
 
@@ -3168,11 +3227,11 @@ const AllView = {
 // ============================================
 const App = {
   template: `
-    <div id="app">
+    <div id="app" @click="closeAllMenus">
       <!-- Floating Note Window (single-note view, Windows Sticky Notes style) -->
       <div v-if="isFloatingNote" class="floating-note-window sticky-mode" :class="['color-' + (floatingNote ? getColorName(floatingNote.color) : 'yellow')]">
         <div class="floating-note-titlebar">
-          <div style="position:relative">
+          <div style="position:relative" @click.stop>
             <button class="titlebar-add-btn" @mousedown.prevent="showNoteAddMenu = !showNoteAddMenu" :title="t('addNote')">+</button>
             <div v-if="showNoteAddMenu" class="titlebar-add-dropdown" @mouseleave="showNoteAddMenu = false">
               <button class="titlebar-add-item" @mousedown.prevent="showNoteAddMenu = false; createNoteInWindow()">📝 {{ t('tabNotes') }}</button>
@@ -3181,21 +3240,48 @@ const App = {
           </div>
           <span class="floating-note-title-text">{{ floatingNote && (floatingNote.title || t('noteTitle')) }}</span>
           <div class="floating-note-toolbar">
-            <div class="fmt-color-picker">
+            <div class="fmt-color-picker" @click.stop>
               <button class="floating-note-tool-btn" @mousedown.prevent="toggleColorPicker" title="🎨">🎨</button>
               <div v-if="showColorPicker" class="color-dot-row">
                 <div v-for="c in NOTE_COLORS" :key="c.value"
-                     class="color-dot" :class="{ active: floatingNote.color === c.value }"
-                     :style="{ backgroundColor: c.value }"
+                     class="color-dot" :class="{ active: getColorName(floatingNote.color) === c.value }"
+                     :style="{ backgroundColor: 'var(--color-note-' + c.value + ')' }"
                      @mousedown.prevent="changeNoteColor(c.value)"></div>
               </div>
             </div>
             <button class="floating-note-tool-btn" @click="toggleFloatingOnTop" :title="t('toggleFloatingOnTop')">{{ floatingOnTop ? '📌' : '📍' }}</button>
-            <button class="floating-note-close" @click="closeFloatingNote" :title="t('close')">×</button>
+            <button class="floating-note-close" @click="closeFloatingNote" :title="t('close')" :aria-label="t('close')">×</button>
           </div>
         </div>
-        <!-- Format toolbar (top, below titlebar) -->
-        <div class="floating-format-toolbar" v-if="floatingNote">
+        <div class="floating-note-content" v-if="floatingNote">
+          <!-- R3-01: Encrypted notes show locked placeholder, editing disabled -->
+          <div v-if="floatingNote.is_encrypted" class="floating-encrypted-notice">🔒 {{ t('encrypted') }}</div>
+          <template v-else>
+          <input
+            v-model="floatingNote.title"
+            class="editor-title"
+            :placeholder="t('titlePlaceholder')"
+            @input="floatingDirty = true; scheduleFloatingSave()"
+            @blur="onFloatingNoteBlur"
+          />
+          <div
+            class="editor-content floating-editor"
+            contenteditable="true"
+            role="textbox"
+            aria-multiline="true"
+            ref="floatingEditorContent"
+            :data-placeholder="t('contentPlaceholder')"
+            :aria-label="t('contentPlaceholder')"
+            @input="onFloatingContentInput"
+            @blur="onFloatingNoteBlur"
+            @paste="onFloatingContentPaste"
+            @drop="onFloatingContentDrop"
+            @dragover.prevent
+          ></div>
+          </template>
+        </div>
+        <!-- Format toolbar (bottom, below content) -->
+        <div class="floating-format-toolbar" v-if="floatingNote && !floatingNote.is_encrypted">
           <button class="fmt-btn" @mousedown.prevent="formatCmd('bold')" :title="t('bold')" style="font-weight:bold">B</button>
           <button class="fmt-btn" @mousedown.prevent="formatCmd('italic')" :title="t('italic')" style="font-style:italic">I</button>
           <button class="fmt-btn" @mousedown.prevent="formatCmd('underline')" :title="t('underline')" style="text-decoration:underline">U</button>
@@ -3204,27 +3290,9 @@ const App = {
           <button class="fmt-btn" @mousedown.prevent="formatCmd('insertUnorderedList')" :title="t('list')">•</button>
           <button class="fmt-btn" @mousedown.prevent="formatCmd('insertOrderedList')" :title="t('list')">1.</button>
           <span class="fmt-sep"></span>
-          <button class="fmt-btn" @mousedown.prevent="insertImageFloating" :title="t('insertImage')">🖼</button>
+          <button class="fmt-btn" @mousedown.prevent="insertImageFloating" :title="t('insertImage')"><span class="icon-image"></span></button>
           <button class="fmt-btn" @mousedown.prevent="shrinkImageFloating" :title="t('shrinkImage')">−</button>
           <button class="fmt-btn" @mousedown.prevent="enlargeImageFloating" :title="t('enlargeImage')">+</button>
-        </div>
-        <div class="floating-note-content" v-if="floatingNote">
-          <input
-            v-model="floatingNote.title"
-            class="editor-title"
-            :placeholder="t('titlePlaceholder')"
-            @blur="onFloatingNoteBlur"
-          />
-          <div
-            class="editor-content floating-editor"
-            contenteditable="true"
-            ref="floatingEditorContent"
-            @input="onFloatingContentInput"
-            @blur="onFloatingNoteBlur"
-            @paste="onFloatingContentPaste"
-            @drop="onFloatingContentDrop"
-            @dragover.prevent
-          ></div>
         </div>
         <div v-else class="empty-state">
           <div class="empty-text">{{ t('loading') }}</div>
@@ -3234,7 +3302,7 @@ const App = {
       <!-- Floating Todo Window (independent desktop window) -->
       <div v-else-if="isFloatingTodo" class="floating-todo-window" :class="['priority-' + (floatingTodo ? floatingTodo.priority : 'medium'), 'color-' + (floatingTodo ? getColorName(floatingTodoColor) : 'blue')]">
         <div class="floating-note-titlebar">
-          <div style="position:relative">
+          <div style="position:relative" @click.stop>
             <button class="titlebar-add-btn" @mousedown.prevent="showTodoAddMenu = !showTodoAddMenu" :title="t('addNote')">+</button>
             <div v-if="showTodoAddMenu" class="titlebar-add-dropdown" @mouseleave="showTodoAddMenu = false">
               <button class="titlebar-add-item" @mousedown.prevent="showTodoAddMenu = false; createNoteInWindow()">📝 {{ t('tabNotes') }}</button>
@@ -3243,32 +3311,18 @@ const App = {
           </div>
           <span class="floating-note-title-text">{{ floatingTodo ? (floatingTodo.title || t('todoTitlePlaceholder')) : t('loading') }}</span>
           <div class="floating-note-toolbar">
-            <div class="fmt-color-picker">
+            <div class="fmt-color-picker" @click.stop>
               <button class="floating-note-tool-btn" @mousedown.prevent="toggleTodoColorPicker" title="🎨">🎨</button>
               <div v-if="showTodoColorPicker" class="color-dot-row">
                 <div v-for="c in NOTE_COLORS" :key="c.value"
                      class="color-dot" :class="{ active: floatingTodoColor === c.value }"
-                     :style="{ backgroundColor: c.value }"
+                     :style="{ backgroundColor: 'var(--color-note-' + c.value + ')' }"
                      @mousedown.prevent="changeTodoColor(c.value)"></div>
               </div>
             </div>
             <button class="floating-note-tool-btn" @click="toggleFloatingTodoOnTop" :title="t('toggleFloatingOnTop')">{{ floatingTodoOnTop ? '📌' : '📍' }}</button>
-            <button class="floating-note-close" @click="closeFloatingTodo" :title="t('close')">×</button>
+            <button class="floating-note-close" @click="closeFloatingTodo" :title="t('close')" :aria-label="t('close')">×</button>
           </div>
-        </div>
-        <!-- Format toolbar -->
-        <div class="floating-format-toolbar" v-if="floatingTodo">
-          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('bold')" :title="t('bold')" style="font-weight:bold">B</button>
-          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('italic')" :title="t('italic')" style="font-style:italic">I</button>
-          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('underline')" :title="t('underline')" style="text-decoration:underline">U</button>
-          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('strikeThrough')" :title="t('strikethrough')" style="text-decoration:line-through">S</button>
-          <span class="fmt-sep"></span>
-          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('insertUnorderedList')" :title="t('list')">•</button>
-          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('insertOrderedList')" :title="t('list')">1.</button>
-          <span class="fmt-sep"></span>
-          <button class="fmt-btn" @mousedown.prevent="insertImageFloatingTodo" :title="t('insertImage')">🖼</button>
-          <button class="fmt-btn" @mousedown.prevent="shrinkImageFloatingTodo" :title="t('shrinkImage')">−</button>
-          <button class="fmt-btn" @mousedown.prevent="enlargeImageFloatingTodo" :title="t('enlargeImage')">+</button>
         </div>
         <div class="floating-todo-content" v-if="floatingTodo">
           <div class="floating-todo-row">
@@ -3292,11 +3346,28 @@ const App = {
           <div
             class="editor-content floating-todo-notes"
             contenteditable="true"
+            role="textbox"
+            aria-multiline="true"
             ref="floatingTodoContent"
             :data-placeholder="t('contentPlaceholder')"
+            :aria-label="t('contentPlaceholder')"
             @input="onFloatingTodoInput"
             @blur="onFloatingTodoChange"
           ></div>
+        </div>
+        <!-- Format toolbar (bottom, below content) -->
+        <div class="floating-format-toolbar" v-if="floatingTodo">
+          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('bold')" :title="t('bold')" style="font-weight:bold">B</button>
+          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('italic')" :title="t('italic')" style="font-style:italic">I</button>
+          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('underline')" :title="t('underline')" style="text-decoration:underline">U</button>
+          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('strikeThrough')" :title="t('strikethrough')" style="text-decoration:line-through">S</button>
+          <span class="fmt-sep"></span>
+          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('insertUnorderedList')" :title="t('list')">•</button>
+          <button class="fmt-btn" @mousedown.prevent="formatTodoCmd('insertOrderedList')" :title="t('list')">1.</button>
+          <span class="fmt-sep"></span>
+          <button class="fmt-btn" @mousedown.prevent="insertImageFloatingTodo" :title="t('insertImage')"><span class="icon-image"></span></button>
+          <button class="fmt-btn" @mousedown.prevent="shrinkImageFloatingTodo" :title="t('shrinkImage')">−</button>
+          <button class="fmt-btn" @mousedown.prevent="enlargeImageFloatingTodo" :title="t('enlargeImage')">+</button>
         </div>
         <div v-else class="empty-state">
           <div class="empty-text">{{ t('loading') }}</div>
@@ -3323,32 +3394,34 @@ const App = {
           <div class="window-header">
             <div class="window-title">StickyTodo</div>
             <div class="window-controls">
-              <button class="window-btn theme-toggle" @click="toggleTheme" :title="theme === 'dark' ? t('toggleLight') : t('toggleDark')">{{ theme === 'dark' ? '☀' : '🌙' }}</button>
-              <div style="position:relative;display:inline-block">
-                <button class="window-btn" @click="showLangMenu = !showLangMenu" :title="t('language')">🌐</button>
-                <div v-if="showLangMenu" class="lang-dropdown">
-                  <button @click="setLocale('zh')">中文</button>
-                  <button @click="setLocale('en')">English</button>
-                  <button @click="setLocale('vi')">Tiếng Việt</button>
+              <button class="window-btn theme-toggle" @click="toggleTheme" :title="theme === 'dark' ? t('toggleLight') : t('toggleDark')" :aria-label="theme === 'dark' ? t('toggleLight') : t('toggleDark')">{{ theme === 'dark' ? '☀' : '🌙' }}</button>
+              <div style="position:relative;display:inline-block" @click.stop>
+                <button class="window-btn" @click="showLangMenu = !showLangMenu" :title="t('language')" :aria-label="t('language')" :aria-expanded="showLangMenu" aria-haspopup="true">🌐</button>
+                <div v-if="showLangMenu" class="lang-dropdown" role="menu">
+                  <button @click="setLocale('zh')" role="menuitem">中文</button>
+                  <button @click="setLocale('en')" role="menuitem">English</button>
+                  <button @click="setLocale('vi')" role="menuitem">Tiếng Việt</button>
                 </div>
               </div>
-              <button class="window-btn" @click="showSettings = true" :title="t('settings')">⚙</button>
+              <button class="window-btn" @click="showSettings = true" :title="t('settings')" :aria-label="t('settings')">⚙</button>
               <div class="opacity-control">
-                <input type="range" class="opacity-slider" min="0.1" max="1.0" step="0.05" v-model.number="opacity" @input="onOpacityChange" :title="t('opacity')" />
+                <input type="range" class="opacity-slider" min="0.1" max="1.0" step="0.05" v-model.number="opacity" @input="onOpacityChange" :title="t('opacity')" :aria-label="t('opacity')" />
               </div>
-              <button class="window-btn pin-top" :class="{ active: alwaysOnTop }" @click="toggleAlwaysOnTop" :title="alwaysOnTop ? t('unpinFromTop') : t('pinOnTop')">{{ alwaysOnTop ? '📌' : '📍' }}</button>
-              <button class="window-btn" @click="exportData" :title="t('export')">⬇</button>
-              <button class="window-btn minimize" @click="minimizeWindow" :title="t('minimize')">▬</button>
-              <button class="window-btn close" @click="quitApp" :title="t('close')">✕</button>
+              <button class="window-btn pin-top" :class="{ active: alwaysOnTop }" @click="toggleAlwaysOnTop" :title="alwaysOnTop ? t('unpinFromTop') : t('pinOnTop')" :aria-label="alwaysOnTop ? t('unpinFromTop') : t('pinOnTop')" :aria-pressed="alwaysOnTop">{{ alwaysOnTop ? '📌' : '📍' }}</button>
+              <button class="window-btn" @click="exportData" :title="t('export')" :aria-label="t('export')">⬇</button>
+              <button class="window-btn minimize" @click="minimizeWindow" :title="t('minimize')" :aria-label="t('minimize')">▬</button>
+              <button class="window-btn close" @click="quitApp" :title="t('close')" :aria-label="t('close')">✕</button>
             </div>
           </div>
           
           <!-- Tabs -->
-          <div class="tabs">
+          <div class="tabs" role="tablist" :aria-label="t('settings')">
             <button v-if="showTabAll"
               class="tab-btn" 
               :class="{ active: currentTab === 'all' }"
               @click="currentTab = 'all'"
+              role="tab"
+              :aria-selected="currentTab === 'all'"
             >
               {{ t('tabAll') }}
             </button>
@@ -3356,6 +3429,8 @@ const App = {
               class="tab-btn" 
               :class="{ active: currentTab === 'notes' }"
               @click="currentTab = 'notes'"
+              role="tab"
+              :aria-selected="currentTab === 'notes'"
             >
               {{ t('tabNotes') }}
             </button>
@@ -3363,6 +3438,8 @@ const App = {
               class="tab-btn" 
               :class="{ active: currentTab === 'todos' }"
               @click="currentTab = 'todos'"
+              role="tab"
+              :aria-selected="currentTab === 'todos'"
             >
               {{ t('tabTodos') }}
             </button>
@@ -3370,6 +3447,8 @@ const App = {
               class="tab-btn" 
               :class="{ active: currentTab === 'timeline' }"
               @click="currentTab = 'timeline'"
+              role="tab"
+              :aria-selected="currentTab === 'timeline'"
             >
               {{ t('tabTimeline') }}
             </button>
@@ -3377,6 +3456,8 @@ const App = {
               class="tab-btn" 
               :class="{ active: currentTab === 'calendar' }"
               @click="currentTab = 'calendar'"
+              role="tab"
+              :aria-selected="currentTab === 'calendar'"
             >
               {{ t('tabCalendar') }}
             </button>
@@ -3384,6 +3465,8 @@ const App = {
               class="tab-btn" 
               :class="{ active: currentTab === 'board' }"
               @click="currentTab = 'board'"
+              role="tab"
+              :aria-selected="currentTab === 'board'"
             >
               {{ t('tabBoard') }}
             </button>
@@ -3391,6 +3474,8 @@ const App = {
               class="tab-btn trash-tab" 
               :class="{ active: currentTab === 'trash' }"
               @click="currentTab = 'trash'; loadTrash()"
+              role="tab"
+              :aria-selected="currentTab === 'trash'"
             >
               🗑 {{ t('trash') }}
             </button>
@@ -3412,23 +3497,23 @@ const App = {
             <template v-if="currentTab === 'all'">
               <div class="content-header">
                 <div class="content-title">{{ t('tabAll') }}</div>
-                <select v-model="allFilter" class="all-filter-select">
+                <select v-model="allFilter" class="all-filter-select" :aria-label="t('filterAll')">
                   <option value="all">{{ t('tabAll') }}</option>
                   <option value="note">{{ t('tabNotes') }}</option>
                   <option value="todo">{{ t('tabTodos') }}</option>
                 </select>
                 <div class="search-box-wrapper">
-                  <span class="search-icon">🔍</span>
-                  <input type="text" class="search-box" :value="searchQuery" @input="onSearchInput" :placeholder="t('searchPlaceholder')" />
-                  <button v-if="searchQuery" class="search-clear" @click="clearSearch" :title="t('clearSearch')">×</button>
+                  <span class="search-icon" aria-hidden="true">🔍</span>
+                  <input type="text" class="search-box" :value="searchQuery" @input="onSearchInput" :placeholder="t('searchPlaceholder')" :aria-label="t('searchPlaceholder')" />
+                  <button v-if="searchQuery" class="search-clear" @click="clearSearch" :title="t('clearSearch')" :aria-label="t('clearSearch')">×</button>
                 </div>
-                <div style="position:relative">
-                  <button class="add-btn" @click="showAddNoteMenu = !showAddNoteMenu" :title="t('addNote')">+</button>
-                  <div v-if="showAddNoteMenu" class="add-dropdown" @mouseleave="showAddNoteMenu = false">
-                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; createNoteInWindow()">🪟 {{ t('tabNotes') }}{{ t('addInWindow') }}</button>
-                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; createTodoInWindow()">🪟 {{ t('tabTodos') }}{{ t('addInWindow') }}</button>
-                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; showNewNoteEditor()">📝 {{ t('tabNotes') }}{{ t('addInSidebar') }}</button>
-                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; showNewTodoEditor()">✓ {{ t('tabTodos') }}{{ t('addInSidebar') }}</button>
+                <div style="position:relative" @click.stop>
+                  <button class="add-btn" @click="showAddNoteMenu = !showAddNoteMenu" :title="t('addNote')" :aria-label="t('addNote')" :aria-expanded="showAddNoteMenu" aria-haspopup="true">+</button>
+                  <div v-if="showAddNoteMenu" class="add-dropdown" @mouseleave="showAddNoteMenu = false" role="menu">
+                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; createNoteInWindow()" role="menuitem">🪟 {{ t('tabNotes') }}{{ t('addInWindow') }}</button>
+                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; createTodoInWindow()" role="menuitem">🪟 {{ t('tabTodos') }}{{ t('addInWindow') }}</button>
+                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; currentTab = 'notes'; showNewNoteEditor()" role="menuitem">📝 {{ t('tabNotes') }}{{ t('addInSidebar') }}</button>
+                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; currentTab = 'todos'; showNewTodoEditor()" role="menuitem">✓ {{ t('tabTodos') }}{{ t('addInSidebar') }}</button>
                   </div>
                 </div>
               </div>
@@ -3439,6 +3524,7 @@ const App = {
                 :filter="allFilter"
                 @edit-note="editNote"
                 @edit-todo="editTodo"
+                @edit-in-sidebar="editInSidebar"
                 @pop-out="popOutItem"
                 @delete-item="onItemDeleted"
                 @refresh="loadAll"
@@ -3456,7 +3542,7 @@ const App = {
                   <input type="text" class="search-box" :value="searchQuery" @input="onSearchInput" :placeholder="t('searchPlaceholder')" />
                   <button v-if="searchQuery" class="search-clear" @click="clearSearch" :title="t('clearSearch')">×</button>
                 </div>
-                <div style="position:relative">
+                <div style="position:relative" @click.stop>
                   <button class="add-btn" @click="showAddNoteMenu = !showAddNoteMenu" :title="t('addNote')">+</button>
                   <div v-if="showAddNoteMenu" class="add-dropdown" @mouseleave="showAddNoteMenu = false">
                     <button class="add-dropdown-item" @click="showAddNoteMenu = false; showNewNoteEditor()">📝 {{ t('addInSidebar') }}</button>
@@ -3473,7 +3559,7 @@ const App = {
                 <button class="btn btn-secondary" @click="batchArchive">{{ t('batchArchive') }}</button>
                 <div class="batch-color-pick">
                   <span class="batch-color-label">{{ t('batchColor') }}</span>
-                  <div v-for="c in NOTE_COLORS" :key="c.value" class="batch-color-dot" :style="{ backgroundColor: c.value }" @click="batchColor(c.value)"></div>
+                  <div v-for="c in NOTE_COLORS" :key="c.value" class="batch-color-dot" :style="{ backgroundColor: 'var(--color-note-' + c.value + ')' }" @click="batchColor(c.value)"></div>
                 </div>
                 <button class="btn btn-secondary" @click="exitMultiSelect">{{ t('exitMultiSelect') }}</button>
               </div>
@@ -3496,7 +3582,7 @@ const App = {
                   :multi-select-mode="multiSelectMode"
                   :selected-ids="selectedIds"
                   @edit="editNote"
-                  @refresh="loadNotes"
+                  @refresh="loadAll"
                   @deleted="onItemDeleted"
                   @duplicate="duplicateNote"
                   @archive="archiveNote"
@@ -3518,7 +3604,7 @@ const App = {
                   <input type="text" class="search-box" :value="searchQuery" @input="onSearchInput" :placeholder="t('searchPlaceholder')" />
                   <button v-if="searchQuery" class="search-clear" @click="clearSearch" :title="t('clearSearch')">×</button>
                 </div>
-                <div style="position:relative">
+                <div style="position:relative" @click.stop>
                   <button class="add-btn" @click="showAddTodoMenu = !showAddTodoMenu" :title="t('addTodo')">+</button>
                   <div v-if="showAddTodoMenu" class="add-dropdown" @mouseleave="showAddTodoMenu = false">
                     <button class="add-dropdown-item" @click="showAddTodoMenu = false; showNewTodoEditor()">✓ {{ t('addInSidebar') }}</button>
@@ -3565,7 +3651,7 @@ const App = {
                   :multi-select-mode="multiSelectMode"
                   :selected-ids="selectedIds"
                   @edit="editTodo"
-                  @refresh="loadTodos"
+                  @refresh="loadAll"
                   @deleted="onItemDeleted"
                   @archive="archiveTodo"
                   @restore="restoreTodo"
@@ -3593,7 +3679,7 @@ const App = {
               <div class="content-header">
                 <div class="content-title">{{ t('tabBoard') }}</div>
               </div>
-              <BoardView :notes="notes" :search-query="debouncedSearchQuery" @edit="editNote" @refresh="loadNotes" />
+              <BoardView :notes="notes" :search-query="debouncedSearchQuery" @edit="editNote" @refresh="loadAll" />
             </template>
 
             <!-- Trash Tab (Recycle Bin) -->
@@ -3627,15 +3713,15 @@ const App = {
           </div>
           
           <!-- Right-click context menu for NoteList/TodoList -->
-          <div v-if="appContextMenu.visible" class="context-menu" :style="{ top: appContextMenu.y + 'px', left: appContextMenu.x + 'px' }" @mouseleave="appContextMenu.visible = false">
+          <div v-if="appContextMenu.visible" class="context-menu" :style="{ top: appContextMenu.y + 'px', left: appContextMenu.x + 'px' }" @mouseleave="appContextMenu.visible = false" @click.stop>
             <button class="ctx-item" @click="appCtxAction('popOut')">🪟 {{ t('popOutNote') }}</button>
             <button class="ctx-item" @click="appCtxAction('edit')">✎ {{ t('edit') }}</button>
             <div class="ctx-sep"></div>
-            <button v-if="appContextMenu.item && appContextMenu.itemType === 'todo'" class="ctx-item" @click="appCtxAction('toggle')">✓ {{ t('toggleTodo') }}</button>
-            <button class="ctx-item" @click="appCtxAction('duplicate')">⧉ {{ t('duplicateNote') }}</button>
-            <button v-if="appContextMenu.item && appContextMenu.itemType === 'note'" class="ctx-item" @click="appCtxAction('color')">🎨 {{ t('color') }}</button>
+      <button v-if="appContextMenu.item && appContextMenu.itemType === 'todo'" class="ctx-item" @click="appCtxAction('toggle')">✓ {{ t('toggleTodo') }}</button>
+      <button class="ctx-item" @click="appCtxAction('duplicate')">⧉ {{ t('duplicateNote') }}</button>
+      <button class="ctx-item" @click="appCtxAction('color')">🎨 {{ t('color') }}</button>
             <div v-if="appContextMenu.showColors" class="ctx-color-row">
-              <div v-for="c in NOTE_COLORS" :key="c.value" class="ctx-color-dot" :style="{ backgroundColor: c.value }" @click="appCtxChangeColor(c.value)"></div>
+              <div v-for="c in NOTE_COLORS" :key="c.value" class="ctx-color-dot" :style="{ backgroundColor: 'var(--color-note-' + c.value + ')' }" @click="appCtxChangeColor(c.value)"></div>
             </div>
             <div class="ctx-sep"></div>
             <button class="ctx-item" @click="appCtxAction('archive')">📦 {{ t('archive') }}</button>
@@ -3663,8 +3749,8 @@ const App = {
       </div>
 
       <!-- Command Palette -->
-      <div v-if="showCommandPalette" class="command-palette-overlay" @click.self="showCommandPalette = false">
-        <div class="command-palette-modal">
+<div v-if="showCommandPalette" class="command-palette-overlay" @click.self="showCommandPalette = false">
+<div class="command-palette-modal" role="dialog" aria-modal="true" :aria-label="t('cmdPlaceholder')">
           <input class="command-palette-input" v-model="commandQuery" :placeholder="t('cmdPlaceholder')" ref="commandInput" @keydown="onCommandKeydown" />
           <div class="command-palette-results">
             <div v-for="(item, idx) in commandResults" :key="item.key"
@@ -3679,9 +3765,12 @@ const App = {
         </div>
       </div>
 
+      <!-- R3-02: Undo toast — shows delete hint and permanent-delete failure -->
+      <div v-if="undoToast" class="undo-toast">{{ undoToast }}</div>
+
       <!-- Settings Modal -->
-      <div v-if="showSettings" class="settings-overlay" @click.self="showSettings = false">
-        <div class="settings-modal" @keydown="onShortcutKeydown">
+<div v-if="showSettings" class="settings-overlay" @click.self="showSettings = false">
+<div class="settings-modal" @keydown="onShortcutKeydown" role="dialog" aria-modal="true" :aria-label="t('settings')">
           <div class="settings-header">
             <span class="settings-title">{{ t('settings') }}</span>
             <button class="settings-close" @click="showSettings = false">×</button>
@@ -3716,6 +3805,15 @@ const App = {
                 <label class="settings-radio"><input type="radio" value="date" v-model="groupingMode" @change="onGroupingChange" /> {{ t('groupByDate') }}</label>
                 <label class="settings-radio"><input type="radio" value="alpha" v-model="groupingMode" @change="onGroupingChange" /> {{ t('groupByAlpha') }}</label>
                 <label class="settings-radio"><input type="radio" value="none" v-model="groupingMode" @change="onGroupingChange" /> {{ t('groupByNone') }}</label>
+              </div>
+            </div>
+            <!-- Color Scheme -->
+            <div class="settings-section">
+              <div class="settings-section-title">{{ t('colorScheme') }}</div>
+              <div class="settings-radio-group">
+                <label class="settings-radio"><input type="radio" value="default" v-model="colorScheme" @change="setColorScheme('default')" /> {{ t('schemeDefault') }}</label>
+                <label class="settings-radio"><input type="radio" value="windows" v-model="colorScheme" @change="setColorScheme('windows')" /> {{ t('schemeWindows') }}</label>
+                <label class="settings-radio"><input type="radio" value="morandi" v-model="colorScheme" @change="setColorScheme('morandi')" /> {{ t('schemeMorandi') }}</label>
               </div>
             </div>
             <!-- Tab visibility -->
@@ -3827,6 +3925,7 @@ const App = {
     const showLangMenu = ref(false);
     const showSettings = ref(false);
     const groupingMode = ref('none');
+    const colorScheme = ref('default'); // default | windows | morandi
 
     // Tab visibility — all hidden by default for a clean UI; user enables in Settings.
     const showTabTimeline = ref(false);
@@ -3839,6 +3938,10 @@ const App = {
     const showTabTodos = ref(true);
 
     const saveTabVisibility = async () => {
+      // R2-05: Prevent hiding ALL core tabs — force at least one visible.
+      if (!showTabAll.value && !showTabNotes.value && !showTabTodos.value) {
+        showTabAll.value = true;
+      }
       try {
         await window.electronAPI.sidebar.setState('tabTimeline', showTabTimeline.value ? 'true' : 'false');
         await window.electronAPI.sidebar.setState('tabTrash', showTabTrash.value ? 'true' : 'false');
@@ -3963,7 +4066,13 @@ const App = {
       if (undoStack.value.length === 0) return;
       const item = undoStack.value.pop();
       try {
-        await window.electronAPI.trash.restore(item.type, item.id);
+        const restored = await window.electronAPI.trash.restore(item.type, item.id);
+        if (!restored) {
+          // R2-06: Item was permanently deleted — can't restore.
+          undoToast.value = t('undoDeleteFailed');
+          setTimeout(() => { undoToast.value = ''; }, 3000);
+          return;
+        }
         loadNotes();
         loadTodos();
         undoToast.value = '';
@@ -4004,25 +4113,25 @@ const App = {
       try {
         await window.electronAPI.notes.update(note.id, { is_archived: 1 });
         if (note.is_pinned) await window.electronAPI.floatingNote.close(note.id);
-        loadNotes();
+        loadAll();
       } catch (_) {}
     };
     const restoreNote = async (note) => {
       try {
         await window.electronAPI.notes.update(note.id, { is_archived: 0 });
-        loadNotes();
+        loadAll();
       } catch (_) {}
     };
     const archiveTodo = async (todo) => {
       try {
         await window.electronAPI.todos.update(todo.id, { is_archived: 1 });
-        loadTodos();
+        loadAll();
       } catch (_) {}
     };
     const restoreTodo = async (todo) => {
       try {
         await window.electronAPI.todos.update(todo.id, { is_archived: 0 });
-        loadTodos();
+        loadAll();
       } catch (_) {}
     };
 
@@ -4036,7 +4145,7 @@ const App = {
           tags: note.tags,
           is_pinned: 0
         });
-        loadNotes();
+        loadAll();
       } catch (_) {}
     };
 
@@ -4060,7 +4169,7 @@ const App = {
         try { await api.delete(id); } catch (_) {}
       }
       selectedIds.value = new Set();
-      if (currentTab.value === 'notes') loadNotes(); else loadTodos();
+      loadAll();
     };
     const batchArchive = async () => {
       const api = currentTab.value === 'notes' ? window.electronAPI.notes : window.electronAPI.todos;
@@ -4068,14 +4177,14 @@ const App = {
         try { await api.update(id, { is_archived: 1 }); } catch (_) {}
       }
       selectedIds.value = new Set();
-      if (currentTab.value === 'notes') loadNotes(); else loadTodos();
+      loadAll();
     };
     const batchColor = async (color) => {
       for (const id of selectedIds.value) {
         try { await window.electronAPI.notes.update(id, { color }); } catch (_) {}
       }
       selectedIds.value = new Set();
-      loadNotes();
+      loadAll();
     };
     const exitMultiSelect = () => {
       multiSelectMode.value = false;
@@ -4202,6 +4311,8 @@ const App = {
       !!window.electronAPI &&
       window.electronAPI.noteId != null
     );
+    // B1: floatingDirty at setup scope so all functions (including onMounted callback) can access it.
+    const floatingDirty = ref(false);
     const floatingNoteId = ref(isFloatingNote.value ? window.electronAPI.noteId : null);
     const floatingNote = ref(null);
     const floatingNoteSaving = ref(false);
@@ -4225,11 +4336,58 @@ const App = {
     const floatingTodoOnTop = ref(
       typeof window !== 'undefined' &&
       !!window.electronAPI &&
-      window.electronAPI.noteOnTop === true
+      window.electronAPI.todoOnTop === true
     );
 
     // Load sidebar state on mount (sidebar mode only; floating notes skip this).
     onMounted(async () => {
+      // Restore theme + color scheme for ALL windows (including floating).
+      try {
+        const savedTheme = await window.electronAPI.sidebar.getState('theme');
+        if (savedTheme) {
+          theme.value = savedTheme;
+          document.documentElement.dataset.theme = savedTheme;
+        }
+        const savedScheme = await window.electronAPI.sidebar.getState('colorScheme');
+        if (savedScheme && ['default','windows','morandi'].includes(savedScheme)) {
+          colorScheme.value = savedScheme;
+          document.documentElement.dataset.colorScheme = savedScheme;
+        }
+      } catch (e) { console.error('Failed to restore theme/scheme:', e); }
+
+      // Listen for settings changes broadcast from other windows (theme, colorScheme).
+      // Applies to ALL windows including floating note/todo windows.
+      if (window.electronAPI.settings && window.electronAPI.settings.onChanged) {
+        window.electronAPI.settings.onChanged((payload) => {
+          if (!payload) return;
+          if (payload.key === 'theme' && payload.value) {
+            theme.value = payload.value;
+            document.documentElement.dataset.theme = payload.value;
+          }
+          if (payload.key === 'colorScheme' && payload.value) {
+            colorScheme.value = payload.value;
+            document.documentElement.dataset.colorScheme = payload.value;
+          }
+        });
+      }
+
+      // Listen for data changes broadcast from other windows — refresh floating window content.
+      // B1: floatingDirty moved to setup scope (not onMounted closure) so all functions can access it.
+      let dataChangedTimer = null;
+      if (window.electronAPI.data && window.electronAPI.data.onChanged) {
+        window.electronAPI.data.onChanged(() => {
+          if (floatingDirty.value) return; // B1: skip all reloads while editing
+          if (isFloatingNote.value) {
+            loadFloatingNote();
+          } else if (isFloatingTodo.value) {
+            loadFloatingTodo();
+          } else {
+            if (dataChangedTimer) clearTimeout(dataChangedTimer);
+            dataChangedTimer = setTimeout(() => { loadNotes(); loadTodos(); }, 200);
+          }
+        });
+      }
+
       if (isFloatingNote.value) {
         await loadFloatingNote();
         return;
@@ -4244,11 +4402,7 @@ const App = {
         if (state !== null && state !== undefined) {
           isCollapsed.value = (state === true) || (state === 'true');
         }
-        const savedTheme = await window.electronAPI.sidebar.getState('theme');
-        if (savedTheme) {
-          theme.value = savedTheme;
-        }
-        document.documentElement.dataset.theme = theme.value;
+        // Theme already restored above — skip duplicate read.
         const savedOpacity = await window.electronAPI.sidebar.getState('opacity');
         if (savedOpacity != null) {
           opacity.value = parseFloat(savedOpacity);
@@ -4271,6 +4425,7 @@ const App = {
         if (savedGrouping) {
           groupingMode.value = savedGrouping;
         }
+        // Color scheme already restored above (before floating window early return).
         // Load tab visibility settings (default: all hidden)
         const sTL = await window.electronAPI.sidebar.getState('tabTimeline');
         if (sTL === 'true') showTabTimeline.value = true;
@@ -4299,16 +4454,7 @@ const App = {
 
       await Promise.all([loadNotes(), loadTodos()]);
 
-      // Listen for data:changed events from floating windows closing — refresh lists.
-      // OPT-03: Debounce to avoid redundant reloads when multiple windows close.
-      let dataChangedTimer = null;
-      if (window.electronAPI.data && window.electronAPI.data.onChanged) {
-        window.electronAPI.data.onChanged(() => {
-          if (dataChangedTimer) clearTimeout(dataChangedTimer);
-          dataChangedTimer = setTimeout(() => { loadNotes(); loadTodos(); }, 200);
-        });
-      }
-
+      // data:changed listener already set up above (before floating window early return).
       // Start reminder check interval
       const checkReminders = async () => {
         try {
@@ -4343,6 +4489,10 @@ const App = {
     onBeforeUnmount(() => {
       if (reminderInterval) { clearInterval(reminderInterval); reminderInterval = null; }
       if (pomodoroTimer) { clearInterval(pomodoroTimer); pomodoroTimer = null; }
+      // R3-10: Clear floating save timers to prevent saves after unmount
+      if (floatingSaveTimer) { clearTimeout(floatingSaveTimer); floatingSaveTimer = null; }
+      if (floatingTodoSaveTimer) { clearTimeout(floatingTodoSaveTimer); floatingTodoSaveTimer = null; }
+      if (searchTimer) { clearTimeout(searchTimer); searchTimer = null; }
       document.removeEventListener('keydown', onGlobalKeydown);
     });
     
@@ -4376,6 +4526,11 @@ const App = {
       try {
         // OPT-07: O(1) getById instead of O(n) getAll+find
         floatingNote.value = await window.electronAPI.notes.getById(floatingNoteId.value);
+        // B5: If note was deleted (getById returns null), close this floating window.
+        if (!floatingNote.value) {
+          try { await window.electronAPI.floatingNote.close(floatingNoteId.value); } catch (_) {}
+          return;
+        }
         // After Vue updates, populate the contenteditable with HTML content
         await nextTick();
         if (floatingEditorContent.value && floatingNote.value) {
@@ -4395,6 +4550,8 @@ const App = {
           title: floatingNote.value.title,
           content: floatingNote.value.content,
         });
+        // B1: Clear dirty after successful save — next data:changed will reload.
+        floatingDirty.value = false;
       } catch (error) {
         console.error('Failed to save floating note:', error);
       } finally {
@@ -4412,6 +4569,7 @@ const App = {
     const onFloatingContentInput = () => {
       if (!floatingNote.value || !floatingEditorContent.value) return;
       floatingNote.value.content = floatingEditorContent.value.innerHTML;
+      floatingDirty.value = true; // B1: mark dirty — skip reloads while editing
       scheduleFloatingSave();  // auto-save 1.5s after last keystroke
     };
 
@@ -4574,12 +4732,14 @@ const App = {
           floatingNote.value.content = floatingEditorContent.value.innerHTML;
         }
         await saveFloatingNote();
-        // Auto-clean: if the note is completely empty (no title + no content), soft-delete it
-        // so the user doesn't end up with blank notes in the list.
+        // Auto-clean: if the note is completely empty (no title + no text + no images), soft-delete it
+        // C-12: Preserve notes that contain only images — check img tag before stripping HTML.
         if (floatingNote.value) {
           const title = (floatingNote.value.title || '').trim();
-          const contentText = (floatingNote.value.content || '').replace(/<[^>]*>/g, '').trim();
-          if (!title && !contentText) {
+          const raw = floatingNote.value.content || '';
+          const contentText = raw.replace(/<[^>]*>/g, '').trim();
+          const hasImage = /<img\b/i.test(raw);
+          if (!title && !contentText && !hasImage) {
             await window.electronAPI.notes.delete(floatingNote.value.id);
           }
         }
@@ -4634,6 +4794,7 @@ const App = {
       if (!floatingNote.value) return;
       try {
         floatingNote.value.color = color;
+        // C-11/C-24: color change is instant UI update, no dirty flag needed
         await window.electronAPI.notes.update(floatingNote.value.id, { color });
         showColorPicker.value = false;
       } catch (e) {
@@ -4666,15 +4827,24 @@ const App = {
     const floatingTodoContent = ref(null);
     // Todo window color (separate ref so we can change it live without reload).
     // Defaults to blue; loaded from DB in loadFloatingTodo.
-    const floatingTodoColor = ref('#dbeafe');
+    const floatingTodoColor = ref('blue');
     const showTodoColorPicker = ref(false);
 
     const loadFloatingTodo = async () => {
       if (floatingTodoId.value == null) return;
       try {
         floatingTodo.value = await window.electronAPI.todos.getById(floatingTodoId.value);
+        // B5: If todo was deleted, close this floating window.
+        if (!floatingTodo.value) {
+          try { await window.electronAPI.floatingTodo.close(floatingTodoId.value); } catch (_) {}
+          return;
+        }
         if (floatingTodo.value && floatingTodo.value.color) {
-          floatingTodoColor.value = floatingTodo.value.color;
+          floatingTodoColor.value = getColorName(floatingTodo.value.color);
+        }
+        // P0: Cache initial completed state for 0→1 edge detection in saveFloatingTodo.
+        if (floatingTodo.value) {
+          floatingTodo.value._prevCompleted = floatingTodo.value.completed === 1 || floatingTodo.value.completed === true;
         }
         await nextTick();
         if (floatingTodoContent.value && floatingTodo.value) {
@@ -4689,13 +4859,25 @@ const App = {
       if (!floatingTodo.value || floatingTodoSaving.value) return;
       floatingTodoSaving.value = true;
       try {
-        await window.electronAPI.todos.update(floatingTodo.value.id, {
+        const updateData = {
           title: floatingTodo.value.title,
           completed: floatingTodo.value.completed,
           priority: floatingTodo.value.priority,
           due_date: floatingTodo.value.due_date,
           content: floatingTodo.value.content,
-        });
+        };
+        // D4/P0: Only set last_completed_at on the 0→1 transition (completion edge),
+        // NOT on every save — otherwise editing a completed todo resets the timer
+        // and repeat tasks never reset (elapsedHours stays < 24).
+        const prevCompleted = floatingTodo.value._prevCompleted;
+        const currCompleted = floatingTodo.value.completed === 1 || floatingTodo.value.completed === true;
+        if (currCompleted && !prevCompleted) {
+          updateData.last_completed_at = new Date().toISOString();
+        }
+        floatingTodo.value._prevCompleted = currCompleted; // cache for next save
+        await window.electronAPI.todos.update(floatingTodo.value.id, updateData);
+        // B1: Clear dirty after successful save.
+        floatingDirty.value = false;
       } catch (error) {
         console.error('Failed to save floating todo:', error);
       } finally {
@@ -4712,6 +4894,7 @@ const App = {
     const onFloatingTodoInput = () => {
       if (!floatingTodo.value || !floatingTodoContent.value) return;
       floatingTodo.value.content = floatingTodoContent.value.innerHTML;
+      floatingDirty.value = true; // B1: mark dirty
       scheduleFloatingTodoSave();
     };
 
@@ -4775,7 +4958,9 @@ const App = {
       if (floatingTodo.value) {
         try {
           await window.electronAPI.todos.update(floatingTodo.value.id, { color });
-        } catch (e) { console.error('changeTodoColor failed:', e); }
+        } catch (e) {
+          console.error('changeTodoColor failed:', e);
+        }
       }
       showTodoColorPicker.value = false;
     };
@@ -4793,7 +4978,7 @@ const App = {
     const createNoteInWindow = async () => {
       let newNote = null;
       try {
-        newNote = await window.electronAPI.notes.create({ title: '', content: '', color: '#fef3c7' });
+        newNote = await window.electronAPI.notes.create({ title: '', content: '', color: 'yellow' });
         if (newNote && newNote.id) {
           const res = await window.electronAPI.floatingNote.create(newNote.id, { alwaysOnTop: false });
           if (res && res.error) {
@@ -4840,20 +5025,25 @@ const App = {
       switch (action) {
         case 'popOut': popOutItem({ ...item, type }); break;
         case 'edit': type === 'note' ? editNote(item) : editTodo(item); break;
-        case 'toggle': (async () => { try { await window.electronAPI.todos.update(item.id, { completed: item.completed === 1 ? 0 : 1 }); loadTodos(); } catch (e) {} })(); break;
-        case 'duplicate': type === 'note' ? duplicateNote(item) : (async () => { try { await window.electronAPI.todos.create({ title: (item.title||'') + ' ' + t('duplicateSuffix'), priority: item.priority, due_date: item.due_date }); loadTodos(); } catch (e) {} })(); break;
+        case 'toggle': (async () => { try { await window.electronAPI.todos.update(item.id, { completed: item.completed === 1 ? 0 : 1 }); loadAll(); } catch (e) {} })(); break;
+        case 'duplicate': type === 'note' ? duplicateNote(item) : (async () => { try { await window.electronAPI.todos.create({ title: (item.title||'') + ' ' + t('duplicateSuffix'), priority: item.priority, due_date: item.due_date }); loadAll(); } catch (e) {} })(); break;
         case 'archive': type === 'note' ? archiveNote(item) : archiveTodo(item); break;
         case 'delete':
-          if (type === 'note') { if (confirm(t('confirmDeleteNote'))) { window.electronAPI.notes.delete(item.id).then(() => { loadNotes(); onItemDeleted({ type: 'note', id: item.id }); }); } }
-          else { if (confirm(t('confirmDeleteTodo'))) { window.electronAPI.todos.delete(item.id).then(() => { loadTodos(); onItemDeleted({ type: 'todo', id: item.id }); }); } }
+          if (type === 'note') { if (confirm(t('confirmDeleteNote'))) { window.electronAPI.notes.delete(item.id).then(() => { loadAll(); onItemDeleted({ type: 'note', id: item.id }); }); } }
+          else { if (confirm(t('confirmDeleteTodo'))) { window.electronAPI.todos.delete(item.id).then(() => { loadAll(); onItemDeleted({ type: 'todo', id: item.id }); }); } }
           break;
       }
     };
 
     const appCtxChangeColor = async (color) => {
       const item = appContextMenu.value.item;
+      const type = appContextMenu.value.itemType;
       if (!item) return;
-      try { await window.electronAPI.notes.update(item.id, { color }); loadNotes(); } catch (e) {}
+      try {
+        const api = type === 'note' ? window.electronAPI.notes : window.electronAPI.todos;
+        await api.update(item.id, { color });
+        loadAll();
+      } catch (e) { console.error('Change color failed:', e); }
       appContextMenu.value = { visible: false, x: 0, y: 0, item: null, itemType: null, showColors: false };
     };
     
@@ -4874,6 +5064,17 @@ const App = {
       editingTodo.value = todo;
       showingEditor.value = true;
     };
+
+    // Edit item in the sidebar — switch to the correct tab first, then open editor.
+    const editInSidebar = (item) => {
+      if (item.type === 'note') {
+        currentTab.value = 'notes';
+        editNote(item);
+      } else {
+        currentTab.value = 'todos';
+        editTodo(item);
+      }
+    };
     
     const hideEditor = () => {
       showingEditor.value = false;
@@ -4883,12 +5084,12 @@ const App = {
     
     const onNoteSaved = () => {
       hideEditor();
-      loadNotes();
+      loadAll();
     };
     
     const onTodoSaved = () => {
       hideEditor();
-      loadTodos();
+      loadAll();
     };
     
     const toggleCollapse = () => {
@@ -4907,24 +5108,22 @@ const App = {
       }
     };
 
-    // Auto-collapse when mouse leaves the sidebar (only if it was auto-expanded from edge).
-    // Use a short delay to avoid flicker when moving mouse within the sidebar.
-    let collapseTimer = null;
-    const collapseIfEdge = () => {
-      if (!isCollapsed.value) {
-        if (collapseTimer) clearTimeout(collapseTimer);
-        collapseTimer = setTimeout(() => {
-          isCollapsed.value = true;
-          window.electronAPI.sidebar.resize(SIDEBAR_COLLAPSED_WIDTH).catch((e) => console.error('resize failed:', e));
-        }, 300);
-      }
+    // R2-08: Removed dead code collapseIfEdge/cancelCollapse — user-confirmed
+    // behavior is "mouse leave stays expanded, click ←/→ to collapse".
+    
+    // I1/I2: Close all dropdown/context menus when clicking anywhere in the app.
+    const closeAllMenus = () => {
+      showLangMenu.value = false;
+      showAddNoteMenu.value = false;
+      showAddTodoMenu.value = false;
+      showNoteAddMenu.value = false;
+      showTodoAddMenu.value = false;
+      showColorPicker.value = false;
+      showTodoColorPicker.value = false;
+      contextMenu.value.visible = false;
+      appContextMenu.value.visible = false;
     };
 
-    // Cancel auto-collapse when mouse re-enters the sidebar.
-    const cancelCollapse = () => {
-      if (collapseTimer) { clearTimeout(collapseTimer); collapseTimer = null; }
-    };
-    
     const minimizeWindow = async () => {
       if (window.electronAPI.app && window.electronAPI.app.minimize) {
         await window.electronAPI.app.minimize();
@@ -4954,8 +5153,26 @@ const App = {
       document.documentElement.dataset.theme = theme.value;
       try {
         await window.electronAPI.sidebar.setState('theme', theme.value);
+        // Broadcast to all floating windows so they update in real time
+        if (window.electronAPI.settings) {
+          window.electronAPI.settings.broadcastChange({ key: 'theme', value: theme.value });
+        }
       } catch (error) {
         console.error('Failed to save theme:', error);
+      }
+    };
+
+    const setColorScheme = async (scheme) => {
+      colorScheme.value = scheme;
+      document.documentElement.dataset.colorScheme = scheme;
+      try {
+        await window.electronAPI.sidebar.setState('colorScheme', scheme);
+        // Broadcast to all floating windows so they update in real time
+        if (window.electronAPI.settings) {
+          window.electronAPI.settings.broadcastChange({ key: 'colorScheme', value: scheme });
+        }
+      } catch (error) {
+        console.error('Failed to save color scheme:', error);
       }
     };
     
@@ -5142,6 +5359,9 @@ const App = {
       onFloatingContentPaste,
       onFloatingContentDrop,
       closeFloatingNote,
+      floatingDirty, // B1: expose for template @input inline expression
+      scheduleFloatingSave, // B2: expose for template @input
+      scheduleFloatingTodoSave, // B2: expose for template @input
       showNewNoteEditor,
       showAddNoteMenu,
       allFilter,
@@ -5158,13 +5378,13 @@ const App = {
       showAddTodoMenu,
       editNote,
       editTodo,
+      editInSidebar,
       hideEditor,
       onNoteSaved,
       onTodoSaved,
       toggleCollapse,
       expandFromEdge,
-      collapseIfEdge,
-      cancelCollapse,
+      closeAllMenus, // I1/I2: global click closes all menus
       minimizeWindow,
       quitApp,
       exportData,
@@ -5183,6 +5403,8 @@ const App = {
       setLocale,
       showSettings,
       groupingMode,
+      colorScheme,
+      setColorScheme,
       showTabTimeline,
       showTabTrash,
       showTabCalendar,
