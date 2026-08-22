@@ -321,14 +321,16 @@ function openFloatingNote(noteId, options) {
     if (!win.isDestroyed()) win.show();
   });
 
+  // main-C-03: Declare posTimer before 'closed' handler so it can be cleared on close.
+  let posTimer = null;
   win.on('closed', () => {
+    if (posTimer) { clearTimeout(posTimer); posTimer = null; } // main-C-03
     if (floatingNotes.get(key) === win) {
       floatingNotes.delete(key);
     }
   });
 
   // Save position/size on move/resize (debounced)
-  let posTimer = null;
   const savePosition = () => {
     if (posTimer) clearTimeout(posTimer);
     posTimer = setTimeout(() => {
@@ -433,13 +435,15 @@ function openFloatingTodo(todoId, options) {
     if (!win.isDestroyed()) win.show();
   });
 
+  // main-C-03: Declare posTimer before 'closed' handler so it can be cleared on close.
+  let posTimer = null;
   win.on('closed', () => {
+    if (posTimer) { clearTimeout(posTimer); posTimer = null; } // main-C-03
     if (floatingTodos.get(key) === win) {
       floatingTodos.delete(key);
     }
   });
 
-  let posTimer = null;
   const savePosition = () => {
     if (posTimer) clearTimeout(posTimer);
     posTimer = setTimeout(() => {
@@ -561,30 +565,79 @@ function safe(handler) {
 
 function registerIpcHandlers() {
   // ---- Notes ----
-  ipcMain.handle('notes:create', safe(async (_evt, data) => db.createNote(data || {})));
+  ipcMain.handle('notes:create', safe(async (_evt, data) => {
+    const result = db.createNote(data || {});
+    // B3: Broadcast data:changed (was missing, unlike todos:create)
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed() && !w.webContents.isDestroyed()) {
+        w.webContents.send('data:changed', { type: 'note', action: 'create' });
+      }
+    }
+    return result;
+  }));
   ipcMain.handle('notes:getAll', safe(async () => db.getNotes()));
   ipcMain.handle('notes:getById', safe(async (_evt, id) => db.getNoteById(id)));  // OPT-07
   ipcMain.handle('notes:update', safe(async (_evt, id, data) => {
     const existing = db.getNoteById(id);
     const updated = db.updateNote(id, data || {});
+    // B14: Only save version when title or content actually changed (not color/position/tags).
     if (updated && existing) {
-      try { db.saveNoteVersion(id, existing.title, existing.content); } catch (_) {}
+      const titleChanged = data.title !== undefined && data.title !== existing.title;
+      const contentChanged = data.content !== undefined && data.content !== existing.content;
+      if (titleChanged || contentChanged) {
+        try { db.saveNoteVersion(id, existing.title, existing.content); } catch (_) {}
+      }
+    }
+    // Broadcast to all windows so floating windows + sidebar stay in sync
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed() && !w.webContents.isDestroyed()) {
+        w.webContents.send('data:changed', { type: 'note', id, action: 'update' });
+      }
     }
     if (!updated) return { error: `note ${id} not found` };
     return updated;
   }));
-  ipcMain.handle('notes:delete', safe(async (_evt, id) => db.deleteNote(id)));
+  ipcMain.handle('notes:delete', safe(async (_evt, id) => {
+    const result = db.deleteNote(id);
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed() && !w.webContents.isDestroyed()) {
+        w.webContents.send('data:changed', { type: 'note', id, action: 'delete' });
+      }
+    }
+    return result;
+  }));
 
   // ---- Todos ----
-  ipcMain.handle('todos:create', safe(async (_evt, data) => db.createTodo(data || {})));
+  ipcMain.handle('todos:create', safe(async (_evt, data) => {
+    const result = db.createTodo(data || {});
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed() && !w.webContents.isDestroyed()) {
+        w.webContents.send('data:changed', { type: 'todo', action: 'create' });
+      }
+    }
+    return result;
+  }));
   ipcMain.handle('todos:getAll', safe(async () => db.getTodos()));
   ipcMain.handle('todos:getById', safe(async (_evt, id) => db.getTodoById(id)));
   ipcMain.handle('todos:update', safe(async (_evt, id, data) => {
     const updated = db.updateTodo(id, data || {});
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed() && !w.webContents.isDestroyed()) {
+        w.webContents.send('data:changed', { type: 'todo', id, action: 'update' });
+      }
+    }
     if (!updated) return { error: `todo ${id} not found` };
     return updated;
   }));
-  ipcMain.handle('todos:delete', safe(async (_evt, id) => db.deleteTodo(id)));
+  ipcMain.handle('todos:delete', safe(async (_evt, id) => {
+    const result = db.deleteTodo(id);
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed() && !w.webContents.isDestroyed()) {
+        w.webContents.send('data:changed', { type: 'todo', id, action: 'delete' });
+      }
+    }
+    return result;
+  }));
   ipcMain.handle('todos:getByNote', safe(async (_evt, noteId) => db.getTodosByNoteId(noteId)));
   ipcMain.handle('todos:getSubtasks', safe(async (_evt, parentId) => db.getSubtasks(parentId)));
 
@@ -635,6 +688,18 @@ function registerIpcHandlers() {
   ipcMain.on('app:minimize', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.minimize();
+    }
+  });
+
+  // Broadcast a settings change (theme/colorScheme/locale) to ALL windows so
+  // floating note/todo windows update in real time without restart.
+  ipcMain.on('settings:changed', (_evt, payload) => {
+    const { key, value } = payload || {};
+    if (!key) return;
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
+        win.webContents.send('settings:changed', { key, value });
+      }
     }
   });
 
@@ -751,9 +816,13 @@ function registerIpcHandlers() {
   ipcMain.handle('backup:restore', safe(async (_evt, backupPath) => {
     const result = db.restoreBackup(backupPath);
     if (result.ok) {
+      // cross-C-04: Close all floating windows to flush their pending saves,
+      // then flush DB again to capture any final writes before exit+relaunch.
+      for (const [k, w] of floatingNotes) { try { if (!w.isDestroyed()) w.close(); } catch (_) {} }
+      for (const [k, w] of floatingTodos) { try { if (!w.isDestroyed()) w.close(); } catch (_) {} }
+      try { db.saveNow(); } catch (_) {} // final flush after floating windows closed
       // BUG-04: exit immediately (no setTimeout delay) to prevent saveDebounced
       // from overwriting the restored file with stale in-memory data.
-      // return is unreachable on success path — app exits before it.
       app.isQuitting = true;
       app.relaunch();
       app.exit(0);
@@ -770,15 +839,17 @@ function registerIpcHandlers() {
   ipcMain.handle('note:exportImage', safe(async (_evt, noteData) => {
     const noteTitle = noteData.title || 'Note';
     const noteContent = noteData.content || '';
-    const noteColor = noteData.color || '#fef3c7';
-    // BUG-03: Escape HTML entities in noteContent to prevent XSS in the offscreen export window.
-    const safeContent = noteContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    // Re-allow safe formatting tags by un-escaping only approved tags.
+    // FIX-3: Sanitize noteColor — only allow hex colors or color names, strip everything else.
+    const rawColor = noteData.color || 'yellow';
+    const colorMap = { yellow: '#fef3c7', green: '#d1fae5', blue: '#dbeafe', pink: '#fce7f3', gray: '#f3f4f6', purple: '#ede9fe', charcoal: '#4b5563' };
+    let noteColor = colorMap[rawColor] || rawColor;
+    if (!/^#[0-9a-fA-F]{3,8}$/.test(noteColor)) noteColor = '#fef3c7';
+    // FIX-3: Escape HTML entities, then re-allow ONLY safe inline tags (no img/a to prevent onerror/href XSS).
+    // C-1: Also escape single quotes to prevent onclick='...' injection via un-escaped tags.
+    const safeContent = noteContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const allowedBody = safeContent
-      .replace(/&lt;(\/?)(b|i|u|s|strong|em|br|hr|ul|ol|li|p|div|span|img|a|pre|code|table|thead|tbody|tr|th|td|blockquote|h[1-6])\b([^&]*?)&gt;/gi, '<$1$2$3>')
-      .replace(/&lt;img\b/g, '<img')
-      .replace(/&lt;a\b/g, '<a');
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:${noteColor};padding:20px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6}.note-title{font-size:18px;font-weight:bold;margin-bottom:10px}.note-body{word-wrap:break-word;overflow:hidden}.note-body img{max-width:100%;height:auto}.note-body ul,.note-body ol{padding-left:20px}.note-body pre{background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto}.note-body table{border-collapse:collapse;width:100%}.note-body th,.note-body td{border:1px solid #ddd;padding:6px 8px}.note-body blockquote{border-left:3px solid #ddd;padding-left:12px;color:#666}.note-body hr{border:none;border-top:1px solid #ddd;margin:12px 0}</style></head><body><div class="note-title">${noteTitle.replace(/</g,'&lt;')}</div><div class="note-body">${allowedBody}</div></body></html>`;
+      .replace(/&lt;(\/?)(b|i|u|s|strong|em|br|hr|ul|ol|li|p|div|span|pre|code|table|thead|tbody|tr|th|td|blockquote|h[1-6])\b([^&]*?)&gt;/gi, '<$1$2$3>');
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:${noteColor};padding:20px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6}.note-title{font-size:18px;font-weight:bold;margin-bottom:10px}.note-body{word-wrap:break-word;overflow:hidden}.note-body ul,.note-body ol{padding-left:20px}.note-body pre{background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto}.note-body table{border-collapse:collapse;width:100%}.note-body th,.note-body td{border:1px solid #ddd;padding:6px 8px}.note-body blockquote{border-left:3px solid #ddd;padding-left:12px;color:#666}.note-body hr{border:none;border-top:1px solid #ddd;margin:12px 0}</style></head><body><div class="note-title">${noteTitle.replace(/</g,'&lt;')}</div><div class="note-body">${allowedBody}</div></body></html>`;
     const exportWin = new BrowserWindow({
       width: 400,
       height: 500,
@@ -825,11 +896,15 @@ function registerIpcHandlers() {
   // Renderer calls dragTrack:start when user starts dragging a note/todo card.
   // Main process polls cursor position; when it leaves the main window bounds,
   // it pops out a floating window at the cursor position.
+  // R2-01: Added 200ms confirmation delay — cursor must stay outside for 200ms
+  // before popping out, to avoid false positives during in-list reordering.
   let dragTracker = null;
+  let dragOutsideTimer = null;
   ipcMain.on('dragTrack:start', (_evt, payload) => {
     const { type, id } = payload || {};
     if (!type || id == null) return;
     if (dragTracker) clearInterval(dragTracker);
+    if (dragOutsideTimer) { clearTimeout(dragOutsideTimer); dragOutsideTimer = null; }
     dragTracker = setInterval(() => {
       if (!mainWindow || mainWindow.isDestroyed()) { clearInterval(dragTracker); dragTracker = null; return; }
       const cursor = screen.getCursorScreenPoint();
@@ -838,31 +913,41 @@ function registerIpcHandlers() {
       const outside = cursor.x < bounds.x || cursor.x > bounds.x + bounds.width ||
                       cursor.y < bounds.y || cursor.y > bounds.y + bounds.height;
       if (outside) {
-        clearInterval(dragTracker);
-        dragTracker = null;
-        // Pop out at cursor position. Use alwaysOnTop briefly so the new window
-        // appears above other apps, then remove it so it sinks naturally on focus change.
-        if (type === 'note') {
-          const win = openFloatingNote(id, { alwaysOnTop: true });
-          if (win) {
-            win.setPosition(cursor.x - 100, cursor.y - 20);
-            win.focus();
-            // Drop always-on-top after 800ms so it behaves like a normal window
-            setTimeout(() => { try { if (!win.isDestroyed()) win.setAlwaysOnTop(false); } catch (_) {} }, 800);
-          }
-        } else if (type === 'todo') {
-          const win = openFloatingTodo(id, { alwaysOnTop: true });
-          if (win) {
-            win.setPosition(cursor.x - 100, cursor.y - 20);
-            win.focus();
-            setTimeout(() => { try { if (!win.isDestroyed()) win.setAlwaysOnTop(false); } catch (_) {} }, 800);
-          }
+        // Start confirmation timer — only pop out if cursor stays outside for 200ms
+        if (!dragOutsideTimer) {
+          dragOutsideTimer = setTimeout(() => {
+            dragOutsideTimer = null;
+            clearInterval(dragTracker);
+            dragTracker = null;
+            // Pop out at cursor position. Use alwaysOnTop briefly so the new window
+            // appears above other apps, then remove it so it sinks naturally on focus change.
+            if (type === 'note') {
+              const win = openFloatingNote(id, { alwaysOnTop: true });
+              if (win) {
+                win.setPosition(cursor.x - 100, cursor.y - 20);
+                win.focus();
+                // Drop always-on-top after 800ms so it behaves like a normal window
+                setTimeout(() => { try { if (!win.isDestroyed()) win.setAlwaysOnTop(false); } catch (_) {} }, 800);
+              }
+            } else if (type === 'todo') {
+              const win = openFloatingTodo(id, { alwaysOnTop: true });
+              if (win) {
+                win.setPosition(cursor.x - 100, cursor.y - 20);
+                win.focus();
+                setTimeout(() => { try { if (!win.isDestroyed()) win.setAlwaysOnTop(false); } catch (_) {} }, 800);
+              }
+            }
+          }, 200);
         }
+      } else {
+        // Cursor back inside — cancel pending pop-out
+        if (dragOutsideTimer) { clearTimeout(dragOutsideTimer); dragOutsideTimer = null; }
       }
     }, 50);
   });
   ipcMain.on('dragTrack:stop', () => {
     if (dragTracker) { clearInterval(dragTracker); dragTracker = null; }
+    if (dragOutsideTimer) { clearTimeout(dragOutsideTimer); dragOutsideTimer = null; }
   });
 }
 
@@ -889,8 +974,10 @@ function registerGlobalShortcuts() {
 // ---------------------------------------------------------------------------
 
 // Single-instance lock — second launch focuses existing sidebar instead.
+// C-9: Flush pending DB writes before quitting to prevent data loss.
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
+  try { db.saveNow(); } catch (_) {} // C-9: flush pending save before quit
   app.quit();
 } else {
   app.on('second-instance', () => {
@@ -993,10 +1080,10 @@ if (!gotTheLock) {
       }
     }, 60 * 1000);
 
-    // Auto-backup interval (every 30 min)
+    // Auto-backup interval (every 4 hours)
     setInterval(() => {
       try { db.backup(); } catch (err) { logError(`Auto-backup error: ${err.message}`); }
-    }, 30 * 60 * 1000);
+    }, 4 * 60 * 60 * 1000);
   });
 
   // Hide-to-tray behavior on macOS keeps app running regardless; on
