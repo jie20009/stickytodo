@@ -142,6 +142,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   todoId: resolveTodoId(),
   /** Initial always-on-top state for this floating window (default true) */
   noteOnTop: resolveNoteOnTop(),
+  /** Initial always-on-top state for floating todo windows (resolves same flag) */
+  todoOnTop: resolveNoteOnTop(),
 
   notes: {
     create: (data) => ipcRenderer.invoke(CHANNELS.notes.create, data),
@@ -190,6 +192,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     exportToFile: () => ipcRenderer.invoke(CHANNELS.data.exportToFile),
     importFromFile: (jsonData) => ipcRenderer.invoke(CHANNELS.data.importFromFile, jsonData),
     onChanged: (callback) => ipcRenderer.on('data:changed', () => callback()),
+  },
+
+  settings: {
+    broadcastChange: (payload) => ipcRenderer.send('settings:changed', payload),
+    onChanged: (callback) => ipcRenderer.on('settings:changed', (_evt, payload) => callback(payload)),
   },
 
   window: {

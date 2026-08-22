@@ -3,7 +3,7 @@
    ============================================ */
 
 :root {
-  /* Note Colors */
+  /* Note Colors — Default (Classic Light / Tailwind) */
   --color-note-yellow: #fef3c7;
   --color-note-green: #d1fae5;
   --color-note-blue: #dbeafe;
@@ -35,6 +35,7 @@
   --accent-hover: #2563eb;
   --danger: #ef4444;
   --danger-bg: rgba(239, 68, 68, 0.12);
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
   
   /* Spacing Scale (4px base) */
   --space-1: 4px;
@@ -68,6 +69,33 @@
   --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* ============================================
+   Color Schemes — switch via data-color-scheme attribute
+   Default (Classic Light) is already defined in :root above.
+   ============================================ */
+
+/* Windows Sticky Notes配色 */
+[data-color-scheme="windows"] {
+  --color-note-yellow: #EBB400;
+  --color-note-green: #5BBF5B;
+  --color-note-blue: #47C1E8;
+  --color-note-pink: #EAA3D2;
+  --color-note-gray: #919191;
+  --color-note-purple: #A885E4;
+  --color-note-charcoal: #3F3F3F;
+}
+
+/* 莫兰迪柔和配色 — 低饱和度高级感 */
+[data-color-scheme="morandi"] {
+  --color-note-yellow: #E8D5A0;
+  --color-note-green: #B5C9A8;
+  --color-note-blue: #A8C0CC;
+  --color-note-pink: #D4B5B0;
+  --color-note-gray: #C0C0B8;
+  --color-note-purple: #BFB0CC;
+  --color-note-charcoal: #5C5C5C;
+}
+
 [data-theme="light"] {
   --bg-sidebar: rgba(255, 255, 255, 0.95);
   --bg-content: #ffffff;
@@ -85,7 +113,9 @@
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --danger: #ef4444;
-  --danger-bg: rgba(239, 68, 68, 0.08);
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  /* FIX-2: Visible focus ring — accent blue with 40% alpha, visible on both themes */
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.4);
 }
 
 /* ============================================
@@ -157,7 +187,8 @@ body {
   top: 0;
   bottom: 0;
   width: var(--sidebar-collapsed-width);
-  background: rgba(255, 255, 255, 0.9);
+  /* R2-13: Use theme variable instead of hardcoded white */
+  background: var(--bg-sidebar);
   border-top-left-radius: var(--radius-xl);
   border-bottom-left-radius: var(--radius-xl);
   cursor: pointer;
@@ -166,7 +197,7 @@ body {
 }
 
 .sidebar-edge:hover {
-  background: rgba(255, 255, 255, 1);
+  background: var(--bg-secondary);
   box-shadow: var(--shadow-md);
 }
 
@@ -365,7 +396,7 @@ body {
   right: 0;
   z-index: 9999;
   min-width: 160px;
-  background: var(--bg-primary);
+  background: var(--bg-content);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
@@ -407,12 +438,12 @@ body {
 }
 
 .content-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--border-light);
   border-radius: 3px;
 }
 
 .content-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--text-muted);
 }
 
 /* ============================================
@@ -508,7 +539,7 @@ body {
   height: 24px;
   border-radius: var(--radius-sm);
   border: none;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--bg-hover);
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
@@ -611,6 +642,24 @@ body {
 .note-card.color-gray { background: var(--color-note-gray); }
 .note-card.color-purple { background: var(--color-note-purple); }
 .note-card.color-charcoal { background: var(--color-note-charcoal); color: #fff; }
+
+/* Todo Item Color Variants — same solid background as note-card for visual consistency */
+.todo-item.color-yellow { background: var(--color-note-yellow) !important; }
+.todo-item.color-green { background: var(--color-note-green) !important; }
+.todo-item.color-blue { background: var(--color-note-blue) !important; }
+.todo-item.color-pink { background: var(--color-note-pink) !important; }
+.todo-item.color-gray { background: var(--color-note-gray) !important; }
+.todo-item.color-purple { background: var(--color-note-purple) !important; }
+.todo-item.color-charcoal { background: var(--color-note-charcoal) !important; color: #fff; }
+
+/* All-Item Color Variants — same as note-card for visual consistency */
+.all-item.color-yellow { background: var(--color-note-yellow); }
+.all-item.color-green { background: var(--color-note-green); }
+.all-item.color-blue { background: var(--color-note-blue); }
+.all-item.color-pink { background: var(--color-note-pink); }
+.all-item.color-gray { background: var(--color-note-gray); }
+.all-item.color-purple { background: var(--color-note-purple); }
+.all-item.color-charcoal { background: var(--color-note-charcoal); color: #fff; }
 
 /* ============================================
    Todo Items
@@ -920,8 +969,8 @@ body {
 .form-textarea:focus,
 .form-select:focus {
   outline: none;
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .form-textarea {
@@ -965,7 +1014,9 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: rgba(0, 0, 0, 0.6);
+  /* R2-10: White checkmark with shadow for contrast on both light and dark colors */
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   font-size: 14px;
   font-weight: 600;
 }
@@ -1090,8 +1141,8 @@ body {
 
 .editor-title:focus {
   outline: none;
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 /* .editor-content is the main <textarea> */
@@ -1114,8 +1165,8 @@ body {
 
 .editor-content:focus {
   outline: none;
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .editor-content[contenteditable] {
@@ -1312,8 +1363,8 @@ body {
 .category-input:focus,
 .note-select:focus {
   outline: none;
-  border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 /* ============================================
@@ -1369,41 +1420,80 @@ body {
 }
 
 .floating-note-titlebar {
-  height: 28px;
+  height: 36px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-2) 0 var(--space-3);
+  padding: 0 8px 0 12px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
-  -webkit-app-region: drag; /* makes the whole titlebar draggable */
+  -webkit-app-region: drag;
   cursor: move;
   user-select: none;
+  transition: height 0.2s, padding 0.2s;
+  /* overflow: visible — allow color picker dropdown to extend below titlebar.
+     Titlebar collapse uses opacity:0 on children, not overflow clipping. */
+}
+/* Titlebar collapses to narrow colored strip when window loses focus AND mouse leaves (Windows Sticky Notes style) */
+#app:not(:focus-within):not(:hover) .floating-note-titlebar,
+.floating-note-window:not(:focus-within):not(:hover) .floating-note-titlebar,
+.floating-todo-window:not(:focus-within):not(:hover) .floating-note-titlebar {
+  height: 14px;
+  padding: 0;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  overflow: hidden; /* clip children only when collapsed */
+}
+#app:not(:focus-within):not(:hover) .floating-note-titlebar > *,
+.floating-note-window:not(:focus-within):not(:hover) .floating-note-titlebar > *,
+.floating-todo-window:not(:focus-within):not(:hover) .floating-note-titlebar > * {
+  opacity: 0;
 }
 
 .floating-note-title-text {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  max-width: 200px;
 }
 
-.floating-note-close {
-  width: 22px;
-  height: 22px;
+.floating-note-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.floating-note-tool-btn {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: none;
-  background: var(--bg-hover);
-  color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1;
+  transition: background var(--transition-fast);
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.floating-note-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
   line-height: 1;
   transition: all var(--transition-fast);
   -webkit-app-region: no-drag; /* button must remain clickable */
@@ -1421,7 +1511,8 @@ body {
   flex-direction: column;
   padding: var(--space-3);
   gap: var(--space-2);
-  -webkit-app-region: no-drag; /* content area must remain editable */
+  background: #2D2D2D;
+  -webkit-app-region: no-drag;
 }
 
 .floating-note-content .editor-title {
@@ -1444,120 +1535,111 @@ body {
    Triggered by class .sticky-mode on .floating-note-window. The color-*
    class drives the background palette; charcoal gets light text.
    --------------------------------------------------------------------------- */
+/* F-03: Merged duplicate definitions into one. */
 .floating-note-window.sticky-mode {
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* Dark theme: deep body + colored titlebar + dark footer (Windows Sticky Notes style) */
+  background: #2D2D2D;
+  color: #f9fafb;
 }
-.floating-note-window.sticky-mode.color-yellow  { background: #fef3c7; }
-.floating-note-window.sticky-mode.color-green   { background: #d1fae5; }
-.floating-note-window.sticky-mode.color-blue    { background: #dbeafe; }
-.floating-note-window.sticky-mode.color-pink    { background: #fce7f3; }
-.floating-note-window.sticky-mode.color-gray    { background: #f3f4f6; }
-.floating-note-window.sticky-mode.color-purple  { background: #ede9fe; }
-.floating-note-window.sticky-mode.color-charcoal { background: #4b5563; color: #f9fafb; }
 
-/* Minimal colored titlebar — blends with the note background */
+/* Colored titlebar — 7-color stripe as category identifier */
 .floating-note-window.sticky-mode .floating-note-titlebar {
-  background: transparent;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--color-note-yellow); /* default fallback */
+  border-bottom: none;
   padding: 0 var(--space-2);
 }
-.floating-note-window.sticky-mode.color-charcoal .floating-note-titlebar {
-  border-bottom-color: rgba(255, 255, 255, 0.12);
-}
+.floating-note-window.sticky-mode.color-yellow  .floating-note-titlebar { background: var(--color-note-yellow); }
+.floating-note-window.sticky-mode.color-green   .floating-note-titlebar { background: var(--color-note-green); }
+.floating-note-window.sticky-mode.color-blue    .floating-note-titlebar { background: var(--color-note-blue); }
+.floating-note-window.sticky-mode.color-pink    .floating-note-titlebar { background: var(--color-note-pink); }
+.floating-note-window.sticky-mode.color-gray    .floating-note-titlebar { background: var(--color-note-gray); }
+.floating-note-window.sticky-mode.color-purple  .floating-note-titlebar { background: var(--color-note-purple); }
+.floating-note-window.sticky-mode.color-charcoal .floating-note-titlebar { background: var(--color-note-charcoal); }
+
+/* Title text on colored bar — dark for light colors, white for charcoal */
 .floating-note-window.sticky-mode .floating-note-title-text {
-  color: rgba(0, 0, 0, 0.55);
-  font-weight: 500;
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 700;
+  font-size: 16px;
 }
 .floating-note-window.sticky-mode.color-charcoal .floating-note-title-text {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.9);
 }
 
-/* Toolbar container holds the always-on-top toggle and close button */
-.floating-note-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+/* Toolbar buttons on colored titlebar */
+.floating-note-window.sticky-mode .floating-note-tool-btn {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.65);
 }
-
-.floating-note-tool-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  line-height: 1;
-  transition: background var(--transition-fast);
-  -webkit-app-region: no-drag;
-}
-.floating-note-tool-btn:hover {
-  background: rgba(0, 0, 0, 0.14);
+.floating-note-window.sticky-mode .floating-note-tool-btn:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 .floating-note-window.sticky-mode.color-charcoal .floating-note-tool-btn {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
 }
 .floating-note-window.sticky-mode.color-charcoal .floating-note-tool-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* Close button inherits its existing look but adapts to colored backgrounds */
+/* Close button on colored titlebar */
 .floating-note-window.sticky-mode .floating-note-close {
-  background: rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.65);
 }
 .floating-note-window.sticky-mode .floating-note-close:hover {
   background: #e5484d;
   color: white;
 }
 .floating-note-window.sticky-mode.color-charcoal .floating-note-close {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
 }
 
-/* Editor inputs on colored backgrounds — keep readable contrast */
+/* Editor inputs — always light text on dark body, no inner borders */
 .floating-note-window.sticky-mode .editor-title {
   background: transparent;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  color: #1f2937;
-  font-weight: 600;
+  border: none;
+  border-radius: 0;
+  color: #f9fafb;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 4px 0;
+}
+.floating-note-window.sticky-mode .editor-title:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.5);
 }
 .floating-note-window.sticky-mode .editor-title::placeholder {
-  color: rgba(0, 0, 0, 0.35);
-}
-.floating-note-window.sticky-mode.color-charcoal .editor-title {
-  border-bottom-color: rgba(255, 255, 255, 0.14);
-  color: #f9fafb;
-}
-.floating-note-window.sticky-mode.color-charcoal .editor-title::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .floating-note-window.sticky-mode .editor-content {
-  color: #1f2937;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: #e5e7eb;
+  padding: 4px 0;
+}
+.floating-note-window.sticky-mode .editor-content:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3);
 }
 .floating-note-window.sticky-mode .editor-content::placeholder {
-  color: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.35);
 }
-.floating-note-window.sticky-mode.color-charcoal .editor-content {
-  color: #f9fafb;
-}
-.floating-note-window.sticky-mode.color-charcoal .editor-content::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+.floating-note-window.sticky-mode .editor-content[contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
 }
 .floating-note-window.sticky-mode .editor-content a {
-  color: #1d4ed8;
-}
-.floating-note-window.sticky-mode.color-charcoal .editor-content a {
-  color: #93c5fd;
+  color: #60a5fa;
 }
 .floating-note-window.sticky-mode .editor-content img {
   border-radius: 6px;
@@ -1571,59 +1653,68 @@ body {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.04);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  gap: 4px;
+  padding: 6px 10px;
+  background: #2D2D2D;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   -webkit-app-region: no-drag;
+  transition: opacity 0.2s;
 }
-.floating-note-window.sticky-mode.color-charcoal .floating-format-toolbar {
-  background: rgba(255, 255, 255, 0.06);
-  border-bottom-color: rgba(255, 255, 255, 0.1);
+/* Hide toolbar when window loses focus AND mouse leaves (Windows Sticky Notes style) */
+#app:not(:focus-within):not(:hover) .floating-format-toolbar,
+.floating-note-window:not(:focus-within):not(:hover) .floating-format-toolbar,
+.floating-todo-window:not(:focus-within):not(:hover) .floating-format-toolbar {
+  opacity: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-top: none;
 }
 
 .fmt-btn {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: rgba(0, 0, 0, 0.65);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1;
   transition: background 0.12s;
   flex-shrink: 0;
-  -webkit-app-region: no-drag; /* ensure click works despite parent drag regions */
+  -webkit-app-region: no-drag;
 }
 .fmt-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-.floating-note-window.sticky-mode.color-charcoal .fmt-btn {
-  color: rgba(255, 255, 255, 0.75);
-}
-.floating-note-window.sticky-mode.color-charcoal .fmt-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .fmt-sep {
   width: 1px;
-  height: 16px;
-  background: rgba(0, 0, 0, 0.12);
-  margin: 0 3px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0 4px;
   flex-shrink: 0;
 }
-.floating-note-window.sticky-mode.color-charcoal .fmt-sep {
-  background: rgba(255, 255, 255, 0.18);
+
+/* SVG image icon — landscape with mountains and sun (replaces blurry emoji) */
+.icon-image {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='M21 15l-5-5L5 21'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 }
 
 .fmt-add {
   font-weight: 700;
-  font-size: 16px;
-  width: 28px;
+  font-size: 18px;
+  width: 32px;
 }
 
 /* Color picker dropdown */
@@ -1634,8 +1725,8 @@ body {
 
 /* Large + button in titlebar — visually prominent, bold */
 .titlebar-add-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: none;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.1);
@@ -1644,7 +1735,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
@@ -1729,72 +1820,75 @@ body {
 /* ---------------------------------------------------------------------------
    Floating todo window (independent desktop window)
    --------------------------------------------------------------------------- */
+/* F-03: Merged duplicate definitions into one. */
 .floating-todo-window {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #dbeafe;
+  background: #2D2D2D;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow: visible;
-  color: #1f2937;
+  color: #f9fafb;
 }
-/* Color backgrounds — mirrors the sticky-mode palette */
-.floating-todo-window.color-yellow  { background: #fef3c7; }
-.floating-todo-window.color-green   { background: #d1fae5; }
-.floating-todo-window.color-blue    { background: #dbeafe; }
-.floating-todo-window.color-pink    { background: #fce7f3; }
-.floating-todo-window.color-gray    { background: #f3f4f6; }
-.floating-todo-window.color-purple  { background: #ede9fe; }
-.floating-todo-window.color-charcoal { background: #4b5563; color: #f9fafb; }
-/* Priority accent: colored left border */
+/* Priority accent: colored left border (kept on body) */
 .floating-todo-window.priority-high    { border-left: 4px solid #ef4444; }
 .floating-todo-window.priority-medium  { border-left: 4px solid #f59e0b; }
 .floating-todo-window.priority-low     { border-left: 4px solid #10b981; }
 
+/* Colored titlebar — 7-color stripe */
 .floating-todo-window .floating-note-titlebar {
-  background: transparent;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--color-note-blue); /* default */
 }
-.floating-todo-window.color-charcoal .floating-note-titlebar {
-  border-bottom-color: rgba(255, 255, 255, 0.12);
-}
+.floating-todo-window.color-yellow  .floating-note-titlebar { background: var(--color-note-yellow); }
+.floating-todo-window.color-green   .floating-note-titlebar { background: var(--color-note-green); }
+.floating-todo-window.color-blue    .floating-note-titlebar { background: var(--color-note-blue); }
+.floating-todo-window.color-pink    .floating-note-titlebar { background: var(--color-note-pink); }
+.floating-todo-window.color-gray    .floating-note-titlebar { background: var(--color-note-gray); }
+.floating-todo-window.color-purple  .floating-note-titlebar { background: var(--color-note-purple); }
+.floating-todo-window.color-charcoal .floating-note-titlebar { background: var(--color-note-charcoal); }
+
 .floating-todo-window .floating-note-title-text {
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 700;
+  font-size: 16px;
 }
 .floating-todo-window.color-charcoal .floating-note-title-text {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.9);
 }
 .floating-todo-window .floating-note-tool-btn {
-  background: rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.65);
 }
 .floating-todo-window .floating-note-tool-btn:hover {
-  background: rgba(0, 0, 0, 0.14);
+  background: rgba(0, 0, 0, 0.2);
 }
 .floating-todo-window.color-charcoal .floating-note-tool-btn {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
 }
 .floating-todo-window.color-charcoal .floating-note-tool-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
 }
 .floating-todo-window .floating-note-close {
-  background: rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.65);
 }
 .floating-todo-window .floating-note-close:hover {
   background: #e5484d;
   color: white;
 }
 .floating-todo-window.color-charcoal .floating-note-close {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
 }
-/* fmt-btn on todo window — charcoal variant */
-.floating-todo-window.color-charcoal .fmt-btn {
-  color: rgba(255, 255, 255, 0.75);
+/* fmt-btn on todo window — always light on dark */
+.floating-todo-window .fmt-btn {
+  color: rgba(255, 255, 255, 0.7);
+}
+.floating-todo-window .fmt-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 .floating-todo-window.color-charcoal .fmt-btn:hover {
   background: rgba(255, 255, 255, 0.15);
@@ -1813,6 +1907,7 @@ body {
   flex-direction: column;
   padding: 10px 12px;
   gap: 8px;
+  background: #2D2D2D;
   -webkit-app-region: no-drag;
   overflow: auto;
 }
@@ -1833,13 +1928,17 @@ body {
 .floating-todo-row .editor-title {
   flex: 1;
   background: transparent;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  color: #1f2937;
-  font-weight: 600;
-}
-.floating-todo-window.color-charcoal .floating-todo-row .editor-title {
-  border-bottom-color: rgba(255, 255, 255, 0.14);
+  border: none;
+  border-radius: 0;
   color: #f9fafb;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 4px 0;
+}
+.floating-todo-row .editor-title:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.5);
 }
 
 .floating-todo-meta {
@@ -1855,20 +1954,17 @@ body {
 }
 .floating-todo-field-label {
   font-size: 10px;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.45);
   font-weight: 500;
-}
-.floating-todo-window.color-charcoal .floating-todo-field-label {
-  color: rgba(255, 255, 255, 0.5);
 }
 .floating-todo-select,
 .floating-todo-date {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
   padding: 3px 6px;
   font-size: 12px;
-  background: rgba(255, 255, 255, 0.5);
-  color: #1f2937;
+  background: transparent;
+  color: #e5e7eb;
   cursor: pointer;
 }
 .floating-todo-select:focus,
@@ -1881,20 +1977,17 @@ body {
   flex: 1;
   min-height: 60px;
   overflow: auto;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.3);
-  color: #1f2937;
-  font-size: 13px;
+  padding: 4px 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 14px;
   line-height: 1.5;
-}
-.floating-todo-window.color-charcoal .floating-todo-notes {
-  background: rgba(255, 255, 255, 0.1);
-  color: #f9fafb;
 }
 .floating-todo-notes:empty::before {
   content: attr(data-placeholder);
-  color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.3);
   pointer-events: none;
 }
 .floating-todo-notes img {
@@ -2303,7 +2396,7 @@ body {
   cursor: pointer;
 }
 .settings-checkbox input[type="checkbox"] {
-  accent-color: var(--accent-primary);
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -4079,7 +4172,7 @@ mark.search-match {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: var(--accent-primary);
+  accent-color: var(--accent);
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -4161,7 +4254,7 @@ mark.search-match {
   color: white;
 }
 .all-item-todo {
-  border-left: 3px solid var(--accent-primary);
+  border-left: 3px solid var(--accent);
 }
 
 /* Filter dropdown in All tab */
@@ -4176,7 +4269,37 @@ mark.search-match {
   -webkit-app-region: no-drag;
 }
 .all-filter-select:focus {
-  outline: 2px solid var(--accent-primary);
+  outline: 2px solid var(--accent);
+}
+
+/* R3-02: Undo toast notification */
+.undo-toast {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-content);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+  z-index: 10001;
+  pointer-events: none;
+  animation: undoToastIn 200ms ease;
+}
+@keyframes undoToastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* R3-01: Encrypted note notice in floating window */
+.floating-encrypted-notice {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 16px;
 }
 
 /* Right-click context menu */
@@ -4184,7 +4307,7 @@ mark.search-match {
   position: fixed;
   z-index: 10000;
   min-width: 160px;
-  background: var(--bg-primary);
+  background: var(--bg-content);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
@@ -4241,7 +4364,22 @@ mark.search-match {
   top: 50%;
   left: 50%;
   padding: 6px;
-  border: 2px solid var(--accent-primary);
+  border: 2px solid var(--accent);
   border-radius: 6px;
-  background: var(--bg-primary);
+  background: var(--bg-content);
 }
+
+/* ============================================
+   FIX-6a: Reduced Motion — respect user preference
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

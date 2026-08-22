@@ -14,7 +14,7 @@ if not exist "node_modules\electron\dist\electron.exe" (
     echo   2. Manually download electron and place in node_modules\electron\dist\
     echo.
     echo For OA computers with firewall issues:
-    echo   Download electron-v43.4.1-win32-x64.zip from another network,
+    echo   Download electron-v33.4.11-win32-x64.zip from another network,
     echo   then extract to: %LOCALAPPDATA%\electron\Cache\
     echo   Then run: node node_modules\electron\install.js
     pause
