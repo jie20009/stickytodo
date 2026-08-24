@@ -186,6 +186,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   app: {
     quit: () => ipcRenderer.invoke(CHANNELS.app.quit),
     minimize: () => ipcRenderer.send('app:minimize'),
+    hide: () => ipcRenderer.send('app:hide'),
   },
 
   data: {

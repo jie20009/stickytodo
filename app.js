@@ -3410,7 +3410,7 @@ const App = {
               <button class="window-btn pin-top" :class="{ active: alwaysOnTop }" @click="toggleAlwaysOnTop" :title="alwaysOnTop ? t('unpinFromTop') : t('pinOnTop')" :aria-label="alwaysOnTop ? t('unpinFromTop') : t('pinOnTop')" :aria-pressed="alwaysOnTop">{{ alwaysOnTop ? '📌' : '📍' }}</button>
               <button class="window-btn" @click="exportData" :title="t('export')" :aria-label="t('export')">⬇</button>
               <button class="window-btn minimize" @click="minimizeWindow" :title="t('minimize')" :aria-label="t('minimize')">▬</button>
-              <button class="window-btn close" @click="quitApp" :title="t('close')" :aria-label="t('close')">✕</button>
+              <button class="window-btn close" @click="hideWindow" :title="t('close')" :aria-label="t('close')">✕</button>
             </div>
           </div>
           
@@ -5124,6 +5124,12 @@ const App = {
       appContextMenu.value.visible = false;
     };
 
+    const hideWindow = async () => {
+      if (window.electronAPI && window.electronAPI.app && window.electronAPI.app.hide) {
+        await window.electronAPI.app.hide();
+      }
+    };
+
     const minimizeWindow = async () => {
       if (window.electronAPI.app && window.electronAPI.app.minimize) {
         await window.electronAPI.app.minimize();
@@ -5385,6 +5391,7 @@ const App = {
       toggleCollapse,
       expandFromEdge,
       closeAllMenus, // I1/I2: global click closes all menus
+      hideWindow,
       minimizeWindow,
       quitApp,
       exportData,

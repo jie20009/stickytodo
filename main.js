@@ -694,6 +694,13 @@ function registerIpcHandlers() {
     return { quitting: true };
   }));
 
+  // Hide the main sidebar window without quitting — floating windows stay alive.
+  ipcMain.on('app:hide', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.hide();
+    }
+  });
+
   // Minimize the main sidebar window (fire-and-forget, no return value).
   ipcMain.on('app:minimize', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
