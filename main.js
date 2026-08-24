@@ -1099,13 +1099,11 @@ if (!gotTheLock) {
   // Hide-to-tray behavior on macOS keeps app running regardless; on
   // Windows/Linux default would quit when all windows are closed, so
   // override it. The tray menu provides the explicit quit path.
+  // Floating windows are independent — closing main window or any floating
+  // window does NOT quit the app. App only quits via explicit tray "Quit".
   app.on('window-all-closed', (e) => {
-    // Prevent default quit; user must use tray menu or app:quit.
-    if (process.platform !== 'darwin' && app.isQuitting) {
-      // allow quit
-    } else {
-      e?.preventDefault?.();
-    }
+    // Never quit automatically — keep app alive in tray for floating windows.
+    e?.preventDefault?.();
   });
 
   app.on('activate', () => {
