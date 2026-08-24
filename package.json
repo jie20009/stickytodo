@@ -29,6 +29,7 @@
   "build": {
     "appId": "com.stickytodo.app",
     "productName": "StickyTodo",
+    "icon": "icon.ico",
     "directories": {
       "output": "dist"
     },
@@ -40,6 +41,7 @@
       "style.css",
       "app.js",
       "vue.global.prod.js",
+      "icon.ico",
       "package.json",
       "node_modules/**/*"
     ],

@@ -199,6 +199,7 @@ function createMainWindow() {
     maximizable: false,
     fullscreenable: false,
     show: true,
+    icon: path.join(__dirname, 'icon.ico'),
     webPreferences: {
       preload: PRELOAD_PATH,
       contextIsolation: true,
@@ -490,7 +491,16 @@ function closeFloatingTodo(todoId) {
 // ---------------------------------------------------------------------------
 
 function createTray() {
-  const icon = nativeImage.createFromBuffer(createTrayIconBuffer());
+  // Use custom icon.ico if available, otherwise fall back to generated PNG.
+  const iconPath = path.join(__dirname, 'icon.ico');
+  let icon;
+  if (fs.existsSync(iconPath)) {
+    icon = nativeImage.createFromPath(iconPath);
+    // Resize to 16x16 for tray (Windows tray expects small icons)
+    icon = icon.resize({ width: 16, height: 16 });
+  } else {
+    icon = nativeImage.createFromBuffer(createTrayIconBuffer());
+  }
   tray = new Tray(icon);
   tray.setToolTip('StickyTodo v2.0 by Jie_Sun孙胜杰');
 
