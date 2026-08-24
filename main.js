@@ -46,12 +46,12 @@ const db = require('./db');
 // Constants
 // ---------------------------------------------------------------------------
 
-const SIDEBAR_WIDTH      = 320;
+const SIDEBAR_WIDTH      = 360;
 const SIDEBAR_COLLAPSED  = 16;
-const FLOATING_NOTE_W    = 250;
-const FLOATING_NOTE_H    = 200;
-const FLOATING_TODO_W    = 340;
-const FLOATING_TODO_H    = 320;
+const FLOATING_NOTE_W    = 320;
+const FLOATING_NOTE_H    = 280;
+const FLOATING_TODO_W    = 400;
+const FLOATING_TODO_H    = 400;
 const SIDEBAR_HTML       = 'index.html'; // single HTML for sidebar + floating notes
 const FLOATING_NOTE_HTML = 'index.html'; // floating windows reuse index.html; renderer detects noteId
 const PRELOAD_PATH       = path.join(__dirname, 'preload.js');

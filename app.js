@@ -246,7 +246,7 @@ const locale = ref('zh');
 const t = (key) => I18N[locale.value]?.[key] ?? I18N.zh[key] ?? key;
 
 // Sidebar widths (must match main.js constants)
-const SIDEBAR_EXPANDED_WIDTH = 320;
+const SIDEBAR_EXPANDED_WIDTH = 360;
 const SIDEBAR_COLLAPSED_WIDTH = 16;
 
 // ============================================
