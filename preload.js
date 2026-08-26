@@ -53,6 +53,36 @@ function resolveTodoId() {
 }
 
 // ---------------------------------------------------------------------------
+// Pet window resolvers (Stage 1+2 of StickyTodo Desktop Pet)
+// ---------------------------------------------------------------------------
+
+// petId — set by main.js on the desktop pet BrowserWindow
+function resolvePetId() {
+  try {
+    const flag = process.argv.find((a) => a && a.startsWith('--stickytodo-pet-id='));
+    if (!flag) return null;
+    return flag.split('=')[1] || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Screen bounds for throw-physics clamping. Passed by main.js so the
+// renderer doesn't have to call an IPC method on every bounce.
+function resolvePetScreenBounds() {
+  var w = 1024, h = 768, y = 0;
+  try {
+    const wf = process.argv.find((a) => a && a.startsWith('--stickytodo-screen-w='));
+    const hf = process.argv.find((a) => a && a.startsWith('--stickytodo-screen-h='));
+    const yf = process.argv.find((a) => a && a.startsWith('--stickytodo-work-y='));
+    if (wf) { const n = Number(wf.split('=')[1]); if (Number.isFinite(n) && n > 0) w = n; }
+    if (hf) { const n = Number(hf.split('=')[1]); if (Number.isFinite(n) && n > 0) h = n; }
+    if (yf) { const n = Number(yf.split('=')[1]); if (Number.isFinite(n)) y = n; }
+  } catch (_) { /* fall through to defaults */ }
+  return { w: w, h: h, y: y };
+}
+
+// ---------------------------------------------------------------------------
 // Stable channel names — referenced by main.js IPC handlers
 // ---------------------------------------------------------------------------
 
@@ -129,6 +159,55 @@ const CHANNELS = {
     start: 'dragTrack:start',
     stop:  'dragTrack:stop',
   },
+  // Pet (StickyTodo Desktop Pet, Stage 1+2 + Stage 5/6)
+  pet: {
+    show:           'pet:show',
+    hide:           'pet:hide',
+    toggle:         'pet:toggle',
+    close:          'pet:close',
+    setPosition:    'pet:setPosition',
+    getState:       'pet:getState',
+    setState:       'pet:setState',
+    addXp:          'pet:addXp',
+    dragStart:      'pet:dragStart',
+    dragStop:       'pet:dragStop',
+    listPacks:      'pet:listPacks',
+    getPack:        'pet:getPack',
+    feed:           'pet:feed',
+    pet:            'pet:pet',
+    click:          'pet:click',
+    toggleSidebar:  'pet:toggleSidebar',
+    openSettings:   'pet:openSettings',
+    newTodo:        'pet:newTodo',
+    // Stage 5.1 — mouse chase
+    chaseMouse:     'pet:chaseMouse',
+    stopChase:      'pet:stopChase',
+    // Stage 5.2 — multi-pet
+    create:         'pet:create',
+    list:           'pet:list',
+    breed:          'pet:breed',
+    // Stage 5.3 — morph
+    morph:          'pet:morph',
+    // Stage 6.3 — climb own windows
+    climbWindows:   'pet:climbWindows',
+    // Hit-test: toggle click-through for transparent pet window
+    setHitRegion:   'pet:setHitRegion',
+    moveWindow:     'pet:moveWindow',
+    resizeWindow:   'pet:resizeWindow',
+    showContextMenu:'pet:showContextMenu',
+    // Event channels (used by ipcRenderer.on) — same name as the handler
+    // channel because main.js broadcasts the event with the same name.
+    onChangedEvent: 'pet:changed',
+    openSettingsEv: 'pet:openSettings',
+    newTodoEv:      'pet:newTodo',
+    // Stage 5.3 — morph event (main.js sends this to the pet window)
+    morphEvent:     'pet:morph',
+  },
+  // Stage 6.2 — theme follow
+  settings2: {
+    getTheme:       'settings:getTheme',
+    setTheme:       'settings:setTheme',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -144,6 +223,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   noteOnTop: resolveNoteOnTop(),
   /** Initial always-on-top state for floating todo windows (resolves same flag) */
   todoOnTop: resolveNoteOnTop(),
+
+  // ---- Pet window (StickyTodo Desktop Pet, Stage 1+2) ----
+  petId:       resolvePetId(),
+  petScreenW:  resolvePetScreenBounds().w,
+  petScreenH:  resolvePetScreenBounds().h,
+  petWorkY:    resolvePetScreenBounds().y,
 
   notes: {
     create: (data) => ipcRenderer.invoke(CHANNELS.notes.create, data),
@@ -237,6 +322,59 @@ contextBridge.exposeInMainWorld('electronAPI', {
   drag: {
     start: (payload) => ipcRenderer.send(CHANNELS.drag.start, payload),
     stop:  ()         => ipcRenderer.send(CHANNELS.drag.stop),
+  },
+
+  // ---- Pet (StickyTodo Desktop Pet, Stage 1+2 + Stage 5/6) ----
+  pet: {
+    show:          (petId)         => ipcRenderer.invoke(CHANNELS.pet.show, petId),
+    hide:          (petId)         => ipcRenderer.invoke(CHANNELS.pet.hide, petId),
+    toggle:        (petId)         => ipcRenderer.invoke(CHANNELS.pet.toggle, petId),
+    close:         (petId)         => ipcRenderer.invoke(CHANNELS.pet.close, petId),
+    getState:      (petId)         => ipcRenderer.invoke(CHANNELS.pet.getState, petId),
+    setState:      (petId, state)  => ipcRenderer.invoke(CHANNELS.pet.setState, petId, state),
+    addXp:         (petId, amount, event, moodDelta) =>
+                                     ipcRenderer.invoke(CHANNELS.pet.addXp, petId, amount, event, moodDelta),
+    listPacks:     ()              => ipcRenderer.invoke(CHANNELS.pet.listPacks),
+    getPack:       (id)            => ipcRenderer.invoke(CHANNELS.pet.getPack, id),
+    setPosition:   (payload)       => ipcRenderer.invoke(CHANNELS.pet.setPosition, payload),
+    dragStart:     (payload)       => ipcRenderer.send(CHANNELS.pet.dragStart, payload),
+    dragStop:      (payload)       => ipcRenderer.send(CHANNELS.pet.dragStop, payload),
+    feed:          (petId)         => ipcRenderer.invoke(CHANNELS.pet.feed, petId),
+    pet:           (petId)         => ipcRenderer.invoke(CHANNELS.pet.pet, petId),
+    click:         (petId)         => ipcRenderer.invoke(CHANNELS.pet.click, petId),
+    toggleSidebar: ()              => ipcRenderer.invoke(CHANNELS.pet.toggleSidebar),
+    openSettings:  ()              => ipcRenderer.invoke(CHANNELS.pet.openSettings),
+    newTodo:       ()              => ipcRenderer.invoke(CHANNELS.pet.newTodo),
+    // Stage 5.1 — mouse chase
+    chaseMouse:    (petId)         => ipcRenderer.invoke(CHANNELS.pet.chaseMouse, petId),
+    stopChase:     (petId)         => ipcRenderer.invoke(CHANNELS.pet.stopChase, petId),
+    // Stage 5.2 — multi-pet
+    create:        (packId)        => ipcRenderer.invoke(CHANNELS.pet.create, packId),
+    list:          ()              => ipcRenderer.invoke(CHANNELS.pet.list),
+    breed:         (a, b)          => ipcRenderer.invoke(CHANNELS.pet.breed, a, b),
+    // Stage 5.3 — morph
+    morph:         (petId, packId) => ipcRenderer.invoke(CHANNELS.pet.morph, petId, packId),
+    // Stage 6.3 — climb own windows
+    climbWindows:  (petId)         => ipcRenderer.invoke(CHANNELS.pet.climbWindows, petId),
+    // Hit-test toggle for click-through pet window
+    setHitRegion:  (active)        => ipcRenderer.send(CHANNELS.pet.setHitRegion, active),
+    // Move pet window with enforced 64×64 size (anti DPI-resize)
+    _moveWindow:   (x, y)          => ipcRenderer.send(CHANNELS.pet.moveWindow, x, y),
+    // Expand/shrink pet window to fit dialogue bubble (keeps pet centered)
+    _resizeWindow: (w, h)          => ipcRenderer.send(CHANNELS.pet.resizeWindow, w, h),
+    // Show native context menu at screen coordinates
+    _showContextMenu: (x, y, state) => ipcRenderer.invoke(CHANNELS.pet.showContextMenu, x, y, state),
+    // Events
+    onChanged:     (callback)      => ipcRenderer.on(CHANNELS.pet.onChangedEvent, (_evt, payload) => callback(payload)),
+    onOpenSettings:(callback)      => ipcRenderer.on(CHANNELS.pet.openSettingsEv, () => callback()),
+    onNewTodo:     (callback)      => ipcRenderer.on(CHANNELS.pet.newTodoEv, () => callback()),
+    onMorph:       (callback)      => ipcRenderer.on(CHANNELS.pet.morphEvent, (_evt, payload) => callback(payload)),
+  },
+
+  // Stage 6.2 — theme follow
+  theme: {
+    get:           ()              => ipcRenderer.invoke(CHANNELS.settings2.getTheme),
+    set:           (theme)         => ipcRenderer.invoke(CHANNELS.settings2.setTheme, theme),
   },
 
   /** Channel constants — handy for debugging or advanced renderer code */

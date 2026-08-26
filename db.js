@@ -160,6 +160,42 @@ async function init() {
 
   db.run(`CREATE INDEX IF NOT EXISTS idx_todos_parent_id ON todos(parent_id);`);
 
+  // ---- Pet state (Stage 1+2 of StickyTodo Desktop Pet) ----
+  // One row per pet_id (currently always 'default'; future: multiple pets).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pet_state (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      pet_id       TEXT    DEFAULT 'default',
+      level        INTEGER DEFAULT 1,
+      xp           INTEGER DEFAULT 0,
+      mood         INTEGER DEFAULT 50,
+      energy       INTEGER DEFAULT 100,
+      intimacy     INTEGER DEFAULT 0,
+      daily_streak INTEGER DEFAULT 0,
+      outfit       TEXT    DEFAULT 'none',
+      pet_x        INTEGER,
+      pet_y        INTEGER,
+      chasing      INTEGER DEFAULT 0,
+      character_id TEXT    DEFAULT 'default',
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_pet_state_pet_id ON pet_state(pet_id);`);
+
+  // Pet log: per-event XP / mood / energy deltas for stats and analytics
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pet_log (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      pet_id     TEXT,
+      event      TEXT,
+      xp_gained  INTEGER DEFAULT 0,
+      mood_delta INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_pet_log_pet_id ON pet_log(pet_id);`);
+
   save();
 }
 
@@ -490,6 +526,162 @@ function purgeOldTrash(days = 30) {
 }
 
 // ---------------------------------------------------------------------------
+// Pet state CRUD (StickyTodo Desktop Pet, Stage 1+2)
+// ---------------------------------------------------------------------------
+
+function rowToPet(row) {
+  if (!row) return null;
+  return {
+    id:           row.id,
+    pet_id:       row.pet_id || 'default',
+    level:        row.level != null ? Number(row.level) : 1,
+    xp:           row.xp != null ? Number(row.xp) : 0,
+    mood:         row.mood != null ? Number(row.mood) : 50,
+    energy:       row.energy != null ? Number(row.energy) : 100,
+    intimacy:     row.intimacy != null ? Number(row.intimacy) : 0,
+    daily_streak: row.daily_streak != null ? Number(row.daily_streak) : 0,
+    outfit:       row.outfit || 'none',
+    pet_x:        row.pet_x != null ? Number(row.pet_x) : null,
+    pet_y:        row.pet_y != null ? Number(row.pet_y) : null,
+    chasing:      row.chasing || 0,
+    character_id: row.character_id || 'default',
+    created_at:   row.created_at,
+    updated_at:   row.updated_at,
+  };
+}
+
+/**
+ * Get pet state by pet_id. If missing, create a default row and return it.
+ * Stage 1+2 currently only supports the 'default' pet.
+ */
+function getPetState(petId) {
+  const id = petId || 'default';
+  let row = queryOne('SELECT * FROM pet_state WHERE pet_id = ?', [id]);
+  if (!row) {
+    db.run(
+      `INSERT INTO pet_state (pet_id, level, xp, mood, energy, intimacy, daily_streak, outfit, pet_x, pet_y, chasing, character_id, created_at, updated_at)
+       VALUES (?, 1, 0, 50, 100, 0, 0, 'none', NULL, NULL, 0, 'default', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [id]
+    );
+    row = queryOne('SELECT * FROM pet_state WHERE pet_id = ?', [id]);
+    saveDebounced();
+  }
+  return rowToPet(row);
+}
+
+/**
+ * Stage 5: return all pet state rows. Used by main.js listAllPets() so the
+ * settings panel can show every persisted pet, not just the ones with an
+ * open BrowserWindow.
+ */
+function getAllPetStates() {
+  return queryAll('SELECT * FROM pet_state ORDER BY created_at ASC', []).map(rowToPet);
+}
+
+/**
+ * Update pet state. Only known scalar fields are accepted.
+ * Pass undefined to leave a field unchanged.
+ */
+function updatePetState(petId, updates) {
+  const id = petId || 'default';
+  // Ensure row exists
+  getPetState(id);
+
+  const sets = [];
+  const values = [];
+
+  if (updates.level !== undefined)        { sets.push('level = ?');        values.push(Math.max(1, Number(updates.level) | 0)); }
+  if (updates.xp !== undefined)           { sets.push('xp = ?');           values.push(Math.max(0, Number(updates.xp) | 0)); }
+  if (updates.mood !== undefined)         { sets.push('mood = ?');         values.push(clamp01to100(updates.mood)); }
+  if (updates.energy !== undefined)       { sets.push('energy = ?');       values.push(clamp01to100(updates.energy)); }
+  if (updates.intimacy !== undefined)     { sets.push('intimacy = ?');     values.push(Math.max(0, Math.min(1000, Number(updates.intimacy) | 0))); }
+  if (updates.daily_streak !== undefined) { sets.push('daily_streak = ?'); values.push(Math.max(0, Number(updates.daily_streak) | 0)); }
+  if (updates.outfit !== undefined)       { sets.push('outfit = ?');       values.push(String(updates.outfit)); }
+  if (updates.pet_x !== undefined)        { sets.push('pet_x = ?');        values.push(updates.pet_x === null ? null : Number(updates.pet_x) | 0); }
+  if (updates.pet_y !== undefined)        { sets.push('pet_y = ?');        values.push(updates.pet_y === null ? null : Number(updates.pet_y) | 0); }
+  if (updates.chasing !== undefined)      { sets.push('chasing = ?');      values.push(updates.chasing ? 1 : 0); }
+  if (updates.character_id !== undefined) { sets.push('character_id = ?'); values.push(String(updates.character_id)); }
+
+  if (sets.length === 0) return getPetState(id);
+
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(id);
+
+  db.run(`UPDATE pet_state SET ${sets.join(', ')} WHERE pet_id = ?`, values);
+  saveDebounced();
+  return getPetState(id);
+}
+
+function clamp01to100(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 80;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+/**
+ * Add XP and an event log entry. Optionally set an absolute mood target.
+ *
+ * NOTE: The fourth parameter `moodAbsolute` sets mood to the given value
+ * (clamped 0-100). It is NOT an increment. This naming was corrected from
+ * the misleading original `moodDelta`. Callers wanting incremental mood
+ * changes should use `applyInteraction` in main.js instead, which reads
+ * the current mood, adds a bump, writes via updatePetState, then calls
+ * this function with moodAbsolute=null.
+ *
+ * Level-up rule:
+ *   xp >= level * 100  →  level += 1, xp -= levelBefore * 100
+ */
+function addPetXp(petId, amount, event, moodAbsolute) {
+  const id = petId || 'default';
+  const current = getPetState(id);
+  const ev = event || 'unknown';
+  const xpDelta = Math.max(0, Number(amount) | 0);
+  // moodAbsolute is an absolute target value (0-100), not a delta.
+  const mdDelta = moodAbsolute != null ? clamp01to100(moodAbsolute) - current.mood : 0;
+
+  let newXp = (current.xp || 0) + xpDelta;
+  let newLevel = current.level || 1;
+  // Simple level curve: each level needs level*100 XP
+  while (newXp >= newLevel * 100) {
+    newXp -= newLevel * 100;
+    newLevel += 1;
+  }
+
+  const newMood = moodAbsolute != null ? clamp01to100(moodAbsolute) : current.mood;
+  db.run(
+    `INSERT INTO pet_log (pet_id, event, xp_gained, mood_delta) VALUES (?, ?, ?, ?)`,
+    [id, ev, xpDelta, mdDelta]
+  );
+  // Avoid recursion via updatePetState (which writes updated_at) — write directly
+  db.run(
+    `UPDATE pet_state SET xp = ?, level = ?, mood = ?, updated_at = CURRENT_TIMESTAMP WHERE pet_id = ?`,
+    [newXp, newLevel, newMood, id]
+  );
+  saveDebounced();
+  return getPetState(id);
+}
+
+/**
+ * Retrieve recent log entries for a pet (newest first).
+ */
+function getPetLog(petId, limit) {
+  const id = petId || 'default';
+  const lim = Math.max(1, Math.min(500, Number(limit) || 50));
+  const rows = queryAll(
+    'SELECT * FROM pet_log WHERE pet_id = ? ORDER BY id DESC LIMIT ?',
+    [id, lim]
+  );
+  return rows.map((r) => ({
+    id:         r.id,
+    pet_id:     r.pet_id,
+    event:      r.event,
+    xp_gained:  r.xp_gained,
+    mood_delta: r.mood_delta,
+    created_at: r.created_at,
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // Sidebar state
 // ---------------------------------------------------------------------------
 
@@ -788,6 +980,13 @@ module.exports = {
 
   // import
   importData,
+
+  // pet (Stage 1+2)
+  getPetState,
+  getAllPetStates,
+  updatePetState,
+  addPetXp,
+  getPetLog,
 
   // save control (C-9: flush before quit)
   saveNow,

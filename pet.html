@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!--
+    Pet window CSP:
+      - default: 'self' + inline (matches sidebar)
+      - script:  'self' + inline + eval (Vue not needed, but keep parity with index.html)
+      - style:   'self' + inline (CSS uses keyframes)
+      - img:     'self' + data: + file:  (character packs load PNG via file:// URLs)
+      - media:   'self' + file:          (Stage 6 sound effects; declared now)
+      - font:    'self' + data:          (emoji glyphs use system fonts, not loaded)
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: file:; media-src 'self' file:;">
+  <title>StickyTodo Pet</title>
+  <link rel="stylesheet" href="pet-style.css">
+</head>
+<body>
+  <div id="pet-container"></div>
+  <script src="pet-renderer.js"></script>
+  <script src="pet-window.js"></script>
+</body>
+</html>

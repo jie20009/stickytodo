@@ -43,6 +43,11 @@
       "vue.global.prod.js",
       "icon.ico",
       "package.json",
+      "pet.html",
+      "pet.js",
+      "pet-renderer.js",
+      "pet-window.js",
+      "pet-style.css",
       "node_modules/**/*"
     ],
     "win": {

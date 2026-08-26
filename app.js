@@ -118,6 +118,21 @@ const I18N = {
     importData: '导入数据', importSelect: '选择文件', importResult: '导入完成', importError: '导入失败',
     toggleTodo: '切换完成', undoDeleteFailed: '项目已永久删除，无法恢复',
     colorScheme: '配色方案', schemeDefault: '经典浅色', schemeWindows: 'Windows 便笺', schemeMorandi: '莫兰迪柔和',
+    petTitle: '桌宠', petShow: '显示桌宠', petHide: '隐藏桌宠', petEnabled: '启用桌宠',
+    petLevel: '等级', petXp: '经验', petMood: '心情', petEnergy: '精力',
+    petIntimacy: '亲密度', petStreak: '连续天数', petReset: '重置桌宠', petCharacter: '角色',
+    petOutfit: '换装', petOutfitNone: '默认', petOutfitHat: '帽子', petOutfitGlasses: '眼镜', petOutfitCrown: '皇冠',
+    petResetConfirm: '确定要重置桌宠状态吗？等级、经验、心情、精力、亲密度、连续天数都会归零。',
+    petLocked: '未解锁 (Lv {0})',
+    // Stage 5+6 i18n
+    petMulti: '多桌宠', petNewPet: '新建桌宠', petCreatePack: '选择角色', petCreateConfirm: '创建',
+    petBreed: '繁殖', petBreedHint: '两只亲密度≥300的桌宠可繁殖新桌宠',
+    petMorph: '变形', petChaseMouse: '追鼠标', petStopChase: '停止追鼠标',
+    petClimbWindows: '爬窗口', petCloseThisPet: '关闭此桌宠', petOpenThisPet: '打开此桌宠',
+    petFollowTheme: '跟随系统主题', petBreedNeedIntimacy: '需要亲密度≥300',
+    petIdle: '空闲', petPetLabel: '桌宠', petNoPets: '暂无桌宠', petBreeding: '正在繁殖…',
+    petBreedSuccess: '繁殖成功！', petBreedFailed: '繁殖失败：{0}',
+    petPetId: 'ID', petCharacterLabel: '角色', petFollowSystemThemeHint: '开启后桌宠配色会跟随系统外观变化',
 
   },
   en: {
@@ -178,6 +193,21 @@ const I18N = {
     importData: 'Import data', importSelect: 'Select file', importResult: 'Import complete', importError: 'Import failed',
     toggleTodo: 'Toggle complete', undoDeleteFailed: 'Item permanently deleted, cannot be restored',
     colorScheme: 'Color scheme', schemeDefault: 'Classic Light', schemeWindows: 'Windows Sticky Notes', schemeMorandi: 'Morandi Soft',
+    petTitle: 'Desktop Pet', petShow: 'Show Pet', petHide: 'Hide Pet', petEnabled: 'Enable Pet',
+    petLevel: 'Level', petXp: 'XP', petMood: 'Mood', petEnergy: 'Energy',
+    petIntimacy: 'Intimacy', petStreak: 'Streak', petReset: 'Reset Pet', petCharacter: 'Character',
+    petOutfit: 'Outfit', petOutfitNone: 'Default', petOutfitHat: 'Top Hat', petOutfitGlasses: 'Glasses', petOutfitCrown: 'Crown',
+    petResetConfirm: 'Reset pet state? Level, XP, mood, energy, intimacy and streak will be cleared.',
+    petLocked: 'Locked (Lv {0})',
+    // Stage 5+6 i18n
+    petMulti: 'Multi-Pet', petNewPet: 'New Pet', petCreatePack: 'Character', petCreateConfirm: 'Create',
+    petBreed: 'Breed', petBreedHint: 'Two pets with intimacy ≥300 can breed a new one',
+    petMorph: 'Morph', petChaseMouse: 'Chase mouse', petStopChase: 'Stop chasing',
+    petClimbWindows: 'Climb window', petCloseThisPet: 'Close this pet', petOpenThisPet: 'Open this pet',
+    petFollowTheme: 'Follow system theme', petBreedNeedIntimacy: 'Requires intimacy ≥300',
+    petIdle: 'Idle', petPetLabel: 'Pet', petNoPets: 'No pets yet', petBreeding: 'Breeding…',
+    petBreedSuccess: 'Breeding succeeded!', petBreedFailed: 'Breeding failed: {0}',
+    petPetId: 'ID', petCharacterLabel: 'Character', petFollowSystemThemeHint: 'When enabled, the pet adapts to the system color scheme',
 
   },
   vi: {
@@ -238,12 +268,36 @@ const I18N = {
     importData: 'Nhập dữ liệu', importSelect: 'Chọn tệp', importResult: 'Nhập hoàn thành', importError: 'Nhập thất bại',
     toggleTodo: 'Chuyển hoàn thành', undoDeleteFailed: 'Mục đã xóa vĩnh viễn, không thể khôi phục',
     colorScheme: 'Bảng màu', schemeDefault: 'Kinh điển sáng', schemeWindows: 'Windows Sticky Notes', schemeMorandi: 'Morandi dịu',
+    petTitle: 'Thú cưng', petShow: 'Hiện thú cưng', petHide: 'Ẩn thú cưng', petEnabled: 'Bật thú cưng',
+    petLevel: 'Cấp', petXp: 'KN', petMood: 'Tâm trạng', petEnergy: 'Năng lượng',
+    petIntimacy: 'Thân mật', petStreak: 'Chuỗi ngày', petReset: 'Đặt lại thú cưng', petCharacter: 'Nhân vật',
+    petOutfit: 'Trang phục', petOutfitNone: 'Mặc định', petOutfitHat: 'Mũ cao', petOutfitGlasses: 'Kính', petOutfitCrown: 'Vương miện',
+    petResetConfirm: 'Đặt lại thú cưng? Cấp, KN, tâm trạng, năng lượng, thân mật và chuỗi ngày sẽ về 0.',
+    petLocked: 'Chưa mở (Cấp {0})',
+    // Stage 5+6 i18n
+    petMulti: 'Đa thú cưng', petNewPet: 'Thú cưng mới', petCreatePack: 'Nhân vật', petCreateConfirm: 'Tạo',
+    petBreed: 'Lai ghép', petBreedHint: 'Hai thú cưng có thân mật ≥300 có thể lai ghép',
+    petMorph: 'Biến hình', petChaseMouse: 'Đuổi chuột', petStopChase: 'Dừng đuổi',
+    petClimbWindows: 'Leo cửa sổ', petCloseThisPet: 'Đóng thú cưng này', petOpenThisPet: 'Mở thú cưng này',
+    petFollowTheme: 'Theo chủ đề hệ thống', petBreedNeedIntimacy: 'Yêu cầu thân mật ≥300',
+    petIdle: 'Rảnh', petPetLabel: 'Thú cưng', petNoPets: 'Chưa có thú cưng', petBreeding: 'Đang lai ghép…',
+    petBreedSuccess: 'Lai ghép thành công!', petBreedFailed: 'Lai ghép thất bại: {0}',
+    petPetId: 'ID', petCharacterLabel: 'Nhân vật', petFollowSystemThemeHint: 'Bật để thú cưng thích ứng với giao diện hệ thống',
 
   }
 };
 
 const locale = ref('zh');
-const t = (key) => I18N[locale.value]?.[key] ?? I18N.zh[key] ?? key;
+const t = (key, params) => {
+  let s = I18N[locale.value]?.[key] ?? I18N.zh[key] ?? key;
+  if (params && typeof s === 'string') {
+    s = s.replace(/\{(\d+)\}/g, function (_, idx) {
+      var v = params[idx];
+      return v == null ? '' : String(v);
+    });
+  }
+  return s;
+};
 
 // Sidebar widths (must match main.js constants)
 const SIDEBAR_EXPANDED_WIDTH = 360;
@@ -2065,6 +2119,7 @@ const NoteEditor = {
 
       try {
         let savedNote;
+        const isNew = !(props.note && props.note.id);
         if (props.note && props.note.id) {
           savedNote = await window.electronAPI.notes.update(props.note.id, noteData);
         } else {
@@ -2076,6 +2131,11 @@ const NoteEditor = {
           await window.electronAPI.floatingNote.create(savedNote.id, { alwaysOnTop: false });
         } else if (isPinned.value && props.note) {
           await window.electronAPI.floatingNote.create(props.note.id, { alwaysOnTop: false });
+        }
+
+        // Stage 3 XP: creating a new note grants +2 XP. Edits don't.
+        if (isNew) {
+          try { window.stickyTodoAwardXp && window.stickyTodoAwardXp(2, 'newNote'); } catch (_) {}
         }
 
         emit('saved');
@@ -2751,10 +2811,15 @@ const TodoEditor = {
       };
 
       try {
+        const isNew = !(props.todo && props.todo.id);
         if (props.todo && props.todo.id) {
           await window.electronAPI.todos.update(props.todo.id, todoData);
         } else {
           await window.electronAPI.todos.create(todoData);
+        }
+        // Stage 3 XP: creating a new todo grants +2 XP. Edits don't.
+        if (isNew) {
+          try { window.stickyTodoAwardXp && window.stickyTodoAwardXp(2, 'newTodo'); } catch (_) {}
         }
         emit('saved');
       } catch (error) {
@@ -3087,6 +3152,13 @@ const AllView = {
       try {
         const newCompleted = item.completed === 1 ? 0 : 1;
         await window.electronAPI.todos.update(item.id, { completed: newCompleted });
+        // Stage 3 XP: completing a todo grants +10 XP (+20 bonus for high priority).
+        if (newCompleted === 1) {
+          try { window.stickyTodoAwardXp && window.stickyTodoAwardXp(10, 'todoComplete'); } catch (_) {}
+          if (item.priority === 'high') {
+            try { window.stickyTodoAwardXp && window.stickyTodoAwardXp(20, 'todoCompleteHigh'); } catch (_) {}
+          }
+        }
         emit('refresh');
       } catch (e) { console.error('Toggle todo failed:', e); }
     };
@@ -3816,6 +3888,101 @@ const App = {
                 <label class="settings-radio"><input type="radio" value="morandi" v-model="colorScheme" @change="setColorScheme('morandi')" /> {{ t('schemeMorandi') }}</label>
               </div>
             </div>
+            <!-- Pet (StickyTodo Desktop Pet, Stage 1+2 + Stage 5+6) -->
+            <div class="settings-section">
+              <div class="settings-section-title">{{ t('petTitle') }}</div>
+              <div class="settings-row">
+                <label class="settings-checkbox">
+                  <input type="checkbox" v-model="petEnabled" @change="onPetEnabledChange" />
+                  {{ t('petEnabled') }}
+                </label>
+                <button v-if="petEnabled" class="btn btn-secondary" @click="togglePetWindow">{{ petShown ? t('petHide') : t('petShow') }}</button>
+              </div>
+              <div class="settings-row">
+                <label class="settings-label">{{ t('petCharacter') }}</label>
+                <select class="settings-select" v-model="petCharacterId" @change="onPetCharacterChange">
+                  <option v-for="p in petPacks" :key="p.id" :value="p.id">{{ p.name }} {{ p.emoji || '' }}</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <label class="settings-label">{{ t('petOutfit') }}</label>
+                <select class="settings-select" v-model="petOutfit" @change="onPetOutfitChange">
+                  <option value="none">{{ t('petOutfitNone') }}</option>
+                  <option value="hat" :disabled="!isOutfitUnlocked('hat')">🎩 {{ t('petOutfitHat') }} <span v-if="!isOutfitUnlocked('hat')">({{ t('petLocked', {0: 5}) }})</span></option>
+                  <option value="glasses" :disabled="!isOutfitUnlocked('glasses')">👓 {{ t('petOutfitGlasses') }} <span v-if="!isOutfitUnlocked('glasses')">({{ t('petLocked', {0: 6}) }})</span></option>
+                  <option value="crown" :disabled="!isOutfitUnlocked('crown')">👑 {{ t('petOutfitCrown') }} <span v-if="!isOutfitUnlocked('crown')">({{ t('petLocked', {0: 9}) }})</span></option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <label class="settings-checkbox">
+                  <input type="checkbox" v-model="petFollowTheme" @change="onPetFollowThemeChange" />
+                  {{ t('petFollowTheme') }}
+                </label>
+                <span class="settings-hint">{{ t('petFollowSystemThemeHint') }}</span>
+              </div>
+              <div class="settings-row">
+                <button class="btn btn-secondary" @click="resetPet" style="color:var(--danger)">{{ t('petReset') }}</button>
+              </div>
+              <div v-if="petState" class="pet-stats">
+                <div class="pet-stat-row">
+                  <span class="pet-stat-label">{{ t('petLevel') }}</span>
+                  <span class="pet-stat-value">Lv {{ petState.level || 1 }}</span>
+                </div>
+                <div class="pet-stat-row">
+                  <span class="pet-stat-label">{{ t('petXp') }}</span>
+                  <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: petXpPercent + '%' }"></div></div>
+                  <span class="pet-stat-value">{{ petState.xp || 0 }} / {{ petXpToNext }}</span>
+                </div>
+                <div class="pet-stat-row">
+                  <span class="pet-stat-label">{{ t('petMood') }}</span>
+                  <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: (petState.mood || 0) + '%' }"></div></div>
+                  <span class="pet-stat-value">{{ petState.mood || 0 }}</span>
+                </div>
+                <div class="pet-stat-row">
+                  <span class="pet-stat-label">{{ t('petEnergy') }}</span>
+                  <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: (petState.energy || 0) + '%' }"></div></div>
+                  <span class="pet-stat-value">{{ petState.energy || 0 }}</span>
+                </div>
+                <div class="pet-stat-row">
+                  <span class="pet-stat-label">{{ t('petIntimacy') }}</span>
+                  <span class="pet-stat-value">{{ petState.intimacy || 0 }}</span>
+                </div>
+                <div class="pet-stat-row">
+                  <span class="pet-stat-label">{{ t('petStreak') }}</span>
+                  <span class="pet-stat-value">{{ petState.daily_streak || 0 }}</span>
+                </div>
+              </div>
+              <!-- Stage 5.2: Multi-pet list + create + breed -->
+              <div class="settings-subsection">
+                <div class="settings-section-subtitle">{{ t('petMulti') }}</div>
+                <div class="settings-row settings-row-inline">
+                  <label class="settings-label">{{ t('petCreatePack') }}</label>
+                  <select class="settings-select" v-model="newPetPackId">
+                    <option v-for="p in petPacks" :key="p.id" :value="p.id">{{ p.name }} {{ p.emoji || '' }}</option>
+                  </select>
+                  <button class="btn btn-primary" @click="createNewPet">{{ t('petNewPet') }}</button>
+                </div>
+                <div v-if="petList.length === 0" class="settings-hint">{{ t('petNoPets') }}</div>
+                <div v-else class="pet-list">
+                  <div v-for="p in petList" :key="p.pet_id" class="pet-list-row">
+                    <span class="pet-list-id" :title="p.pet_id">{{ shortPetId(p.pet_id) }}</span>
+                    <span class="pet-list-char">{{ petPackLabel(p.character_id) }}</span>
+                    <span class="pet-list-lv">Lv {{ p.level }}</span>
+                    <span class="pet-list-intimacy" :title="t('petIntimacy')">{{ p.intimacy }}</span>
+                    <span v-if="p.chasing" class="pet-list-tag">🐭</span>
+                    <span v-if="p.open" class="pet-list-tag pet-list-tag--open">●</span>
+                    <button class="btn btn-secondary btn-small" @click="openPetFromList(p.pet_id)" :disabled="p.open">{{ p.open ? t('petOpenThisPet') + ' …' : t('petOpenThisPet') }}</button>
+                    <button class="btn btn-secondary btn-small" @click="closePetFromList(p.pet_id)">{{ t('petCloseThisPet') }}</button>
+                    <button class="btn btn-secondary btn-small" @click="morphPetFromList(p.pet_id)">{{ t('petMorph') }}</button>
+                  </div>
+                </div>
+                <!-- Breed -->
+                <div v-if="breedablePairs.length > 0" class="settings-row">
+                  <button class="btn btn-secondary" @click="breedFirstPair">{{ t('petBreed') }}</button>
+                  <span class="settings-hint">{{ t('petBreedHint') }}</span>
+                </div>
+              </div>
+            </div>
             <!-- Tab visibility -->
             <div class="settings-section">
               <div class="settings-section-title">{{ t('tabVisibility') }}</div>
@@ -3926,6 +4093,19 @@ const App = {
     const showSettings = ref(false);
     const groupingMode = ref('none');
     const colorScheme = ref('default'); // default | windows | morandi
+
+    // ---- Desktop pet (Stage 1+2) ----
+    const petEnabled    = ref(false);
+    const petShown      = ref(false);
+    const petState      = ref(null);
+    const petPacks      = ref([]);
+    const petCharacterId = ref('default');
+    const petOutfit     = ref('none');
+    // Stage 5+6
+    const petList         = ref([]);     // result of pet:list
+    const newPetPackId    = ref('default'); // pack selected for "new pet" button
+    const petFollowTheme  = ref(false);  // sidebar_state 'petFollowTheme'
+    const petTheme        = ref('dark'); // current OS theme, drives sidebar style
 
     // Tab visibility — all hidden by default for a clean UI; user enables in Settings.
     const showTabTimeline = ref(false);
@@ -4204,6 +4384,8 @@ const App = {
           pomodoroSeconds.value = 1500;
           try { const ctx = new AudioContext(); const osc = ctx.createOscillator(); osc.connect(ctx.destination); osc.frequency.value = 800; osc.start(); osc.stop(ctx.currentTime + 0.2); } catch (_) {}
           setTimeout(() => alert(t('pomodoroComplete')), 100);
+          // Stage 3 XP: finishing a pomodoro grants +15 XP.
+          try { window.stickyTodoAwardXp && window.stickyTodoAwardXp(15, 'pomodoroComplete'); } catch (_) {}
           return;
         }
         pomodoroSeconds.value--;
@@ -4448,6 +4630,70 @@ const App = {
         }
         const width = isCollapsed.value ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH;
         await window.electronAPI.sidebar.resize(width);
+
+        // ---- Desktop pet state (Stage 1+2) ----
+        try {
+          const savedPetEnabled = await window.electronAPI.sidebar.getState('petEnabled');
+          petEnabled.value = (savedPetEnabled === 'true' || savedPetEnabled === true);
+        } catch (_) { /* ignore */ }
+        // Stage 6.2: read petFollowTheme + current OS theme.
+        try {
+          const savedPetFollowTheme = await window.electronAPI.sidebar.getState('petFollowTheme');
+          petFollowTheme.value = (savedPetFollowTheme === 'true' || savedPetFollowTheme === true);
+        } catch (_) { /* ignore */ }
+        try {
+          const themeApi = window.electronAPI && window.electronAPI.theme;
+          if (themeApi && themeApi.get) {
+            const r = await themeApi.get();
+            if (r && r.theme) petTheme.value = r.theme;
+          }
+        } catch (_) { /* ignore */ }
+        await refreshPetState();
+        await loadPetPacks();
+        await refreshPetList();
+        if (petState.value && petState.value.character_id) {
+          petCharacterId.value = petState.value.character_id;
+        }
+        if (petState.value && petState.value.outfit != null) {
+          petOutfit.value = petState.value.outfit || 'none';
+        }
+
+        // Listen for pet:changed broadcasts (XP events, mood updates, etc.)
+        if (window.electronAPI.pet && window.electronAPI.pet.onChanged) {
+          window.electronAPI.pet.onChanged((payload) => {
+            if (payload && payload.state) {
+              // Stage 5: only sync the active 'default' pet's UI bindings.
+              // Multi-pet state updates for other pets are handled via the
+              // separate list refresh below.
+              if (!payload.petId || payload.petId === 'default') {
+                petState.value = payload.state;
+                if (payload.state.character_id && payload.state.character_id !== petCharacterId.value) {
+                  petCharacterId.value = payload.state.character_id;
+                }
+                // Stage 3: sync outfit so the UI follows DB writes.
+                if (payload.state.outfit != null && payload.state.outfit !== petOutfit.value) {
+                  petOutfit.value = payload.state.outfit;
+                }
+              }
+              // Stage 5.2: any pet state change may add/remove/update a row
+              // in the pet list. Refresh in background.
+              refreshPetList();
+            }
+          });
+        }
+
+        // Pet window right-click menu actions: open settings / new todo
+        if (window.electronAPI.pet && window.electronAPI.pet.onOpenSettings) {
+          window.electronAPI.pet.onOpenSettings(() => { showSettings.value = true; });
+        }
+        if (window.electronAPI.pet && window.electronAPI.pet.onNewTodo) {
+          window.electronAPI.pet.onNewTodo(() => {
+            // B5 fix: switch to todos tab and open a new todo editor directly,
+            // instead of opening the settings panel (which confused users).
+            currentTab.value = 'todos';
+            showNewTodoEditor();
+          });
+        }
       } catch (error) {
         console.error('Failed to load sidebar state:', error);
       }
@@ -4507,6 +4753,13 @@ const App = {
     const loadTodos = async () => {
       try {
         todos.value = await window.electronAPI.todos.getAll();
+        // Stage 3 XP: daily-streak check. If every active todo is completed
+        // and we haven't awarded today yet, grant +50 XP once per day.
+        try {
+          if (window.stickyTodoCheckDailyStreak) {
+            window.stickyTodoCheckDailyStreak(todos.value);
+          }
+        } catch (_) { /* ignore */ }
       } catch (error) {
         console.error('Failed to load todos:', error);
       }
@@ -4985,6 +5238,9 @@ const App = {
             // BUG-06: Window failed to open — clean up the ghost record.
             await window.electronAPI.notes.delete(newNote.id);
           }
+          // Stage 3 XP: a new in-window note grants +2 XP (separate from
+          // the editor's own XP, since this path bypasses NoteEditor).
+          try { window.stickyTodoAwardXp && window.stickyTodoAwardXp(2, 'newNote'); } catch (_) {}
           loadNotes();
         }
       } catch (e) {
@@ -5025,7 +5281,21 @@ const App = {
       switch (action) {
         case 'popOut': popOutItem({ ...item, type }); break;
         case 'edit': type === 'note' ? editNote(item) : editTodo(item); break;
-        case 'toggle': (async () => { try { await window.electronAPI.todos.update(item.id, { completed: item.completed === 1 ? 0 : 1 }); loadAll(); } catch (e) {} })(); break;
+        case 'toggle': (async () => {
+          try {
+            const wasCompleted = item.completed === 1;
+            const next = wasCompleted ? 0 : 1;
+            await window.electronAPI.todos.update(item.id, { completed: next });
+            // Stage 3 XP: completion triggers a +10 (+20 for high priority).
+            if (!wasCompleted && next === 1) {
+              try { window.stickyTodoAwardXp && window.stickyTodoAwardXp(10, 'todoComplete'); } catch (_) {}
+              if (item.priority === 'high') {
+                try { window.stickyTodoAwardXp && window.stickyTodoAwardXp(20, 'todoCompleteHigh'); } catch (_) {}
+              }
+            }
+            await loadAll();
+          } catch (e) {}
+        })(); break;
         case 'duplicate': type === 'note' ? duplicateNote(item) : (async () => { try { await window.electronAPI.todos.create({ title: (item.title||'') + ' ' + t('duplicateSuffix'), priority: item.priority, due_date: item.due_date }); loadAll(); } catch (e) {} })(); break;
         case 'archive': type === 'note' ? archiveNote(item) : archiveTodo(item); break;
         case 'delete':
@@ -5181,7 +5451,305 @@ const App = {
         console.error('Failed to save color scheme:', error);
       }
     };
-    
+
+    // ---- Pet handlers (StickyTodo Desktop Pet, Stage 1+2) ----
+    const petXpToNext = computed(() => Math.max(1, (petState.value && petState.value.level ? petState.value.level : 1) * 100));
+    const petXpPercent = computed(() => {
+      const xp = (petState.value && petState.value.xp) || 0;
+      const cap = petXpToNext.value;
+      return Math.max(0, Math.min(100, Math.round((xp / cap) * 100)));
+    });
+
+    const refreshPetState = async () => {
+      try {
+        const s = await window.electronAPI.pet.getState('default');
+        if (s && typeof s === 'object') petState.value = s;
+      } catch (e) { /* ignore */ }
+    };
+
+    const loadPetPacks = async () => {
+      try {
+        const packs = await window.electronAPI.pet.listPacks();
+        if (Array.isArray(packs)) {
+          petPacks.value = packs.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }));
+        }
+      } catch (e) { /* ignore */ }
+    };
+
+    // Stage 5.2: refresh the multi-pet list from main.js.
+    const refreshPetList = async () => {
+      try {
+        const api = window.electronAPI && window.electronAPI.pet;
+        if (!api || !api.list) return;
+        const list = await api.list();
+        if (Array.isArray(list)) petList.value = list;
+      } catch (e) { /* ignore */ }
+    };
+
+    const petPackLabel = (packId) => {
+      const p = (petPacks.value || []).find((x) => x && x.id === packId);
+      if (p) return (p.name || p.id) + ' ' + (p.emoji || '');
+      return packId || 'default';
+    };
+
+    const shortPetId = (id) => {
+      if (!id) return '';
+      if (id.length <= 14) return id;
+      return id.slice(0, 12) + '…';
+    };
+
+    // Stage 5.2: create a new pet with the selected pack.
+    const createNewPet = async () => {
+      try {
+        const api = window.electronAPI && window.electronAPI.pet;
+        if (!api || !api.create) return;
+        const result = await api.create(newPetPackId.value || 'default');
+        if (result && result.error) {
+          console.error('[pet] create failed', result.error);
+        }
+        await refreshPetList();
+      } catch (e) { console.error('createNewPet failed:', e); }
+    };
+
+    // Stage 5.2: open / close specific pets from the list.
+    const openPetFromList = async (petId) => {
+      try {
+        const api = window.electronAPI && window.electronAPI.pet;
+        if (!api || !api.show) return;
+        await api.show(petId);
+        await refreshPetList();
+      } catch (e) { console.error('openPetFromList failed:', e); }
+    };
+
+    const closePetFromList = async (petId) => {
+      try {
+        const api = window.electronAPI && window.electronAPI.pet;
+        if (!api || !api.close) return;
+        await api.close(petId);
+        await refreshPetList();
+      } catch (e) { console.error('closePetFromList failed:', e); }
+    };
+
+    // Stage 5.3: morph — pick a new pack for an existing pet.
+    const morphPetFromList = async (petId) => {
+      try {
+        const api = window.electronAPI && window.electronAPI.pet;
+        if (!api || !api.morph) return;
+        const target = (petPacks.value || []).find((p) => p && p.id !== getPetCurrentPackId(petId));
+        if (!target) {
+          // Fallback: cycle to default if user has only one pack.
+          await api.morph(petId, newPetPackId.value || 'default');
+        } else {
+          await api.morph(petId, target.id);
+        }
+        await refreshPetList();
+        await refreshPetState();
+      } catch (e) { console.error('morphPetFromList failed:', e); }
+    };
+
+    const getPetCurrentPackId = (petId) => {
+      const p = (petList.value || []).find((x) => x && x.pet_id === petId);
+      return p ? p.character_id : 'default';
+    };
+
+    // Stage 5.2: breedable pairs (both pets intimacy >= 300, distinct ids).
+    const breedablePairs = computed(() => {
+      const list = petList.value || [];
+      const pairs = [];
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          if ((list[i].intimacy || 0) >= 300 && (list[j].intimacy || 0) >= 300) {
+            pairs.push([list[i].pet_id, list[j].pet_id]);
+          }
+        }
+      }
+      return pairs;
+    });
+
+    // Stage 5.2: breed the first available pair.
+    const breedFirstPair = async () => {
+      const pairs = breedablePairs.value;
+      if (pairs.length === 0) {
+        console.info(t('petBreedNeedIntimacy'));
+        return;
+      }
+      try {
+        const api = window.electronAPI && window.electronAPI.pet;
+        if (!api || !api.breed) return;
+        const [a, b] = pairs[0];
+        const result = await api.breed(a, b);
+        if (result && result.error) {
+          console.warn(t('petBreedFailed', {0: result.error}));
+        } else if (result && result.petId) {
+          console.info(t('petBreedSuccess'));
+        }
+        await refreshPetList();
+      } catch (e) { console.error('breedFirstPair failed:', e); }
+    };
+
+    // Stage 6.2: theme follow toggle — persists to sidebar_state and tells
+    // main.js to broadcast the current theme immediately.
+    const onPetFollowThemeChange = async () => {
+      try {
+        await window.electronAPI.sidebar.setState('petFollowTheme', petFollowTheme.value ? 'true' : 'false');
+      } catch (e) { console.error('Failed to save petFollowTheme:', e); }
+      // Ask main.js to push the current theme so we update right away.
+      try {
+        const api = window.electronAPI && window.electronAPI.theme;
+        if (api && api.get) {
+          const r = await api.get();
+          if (r && r.theme) petTheme.value = r.theme;
+        }
+      } catch (_) {}
+    };
+
+    // Stage 6.2: when the OS theme flips, mirror it into petTheme.
+    if (window.electronAPI && window.electronAPI.settings && window.electronAPI.settings.onChanged) {
+      window.electronAPI.settings.onChanged(function (payload) {
+        if (payload && payload.theme) {
+          petTheme.value = payload.theme;
+        }
+      });
+    }
+
+    const onPetEnabledChange = async () => {
+      try {
+        await window.electronAPI.sidebar.setState('petEnabled', petEnabled.value ? 'true' : 'false');
+      } catch (e) { console.error('Failed to save petEnabled:', e); }
+      if (petEnabled.value) {
+        await refreshPetState();
+        await loadPetPacks();
+        try {
+          await window.electronAPI.pet.show('default');
+          petShown.value = true;
+        } catch (e) { console.error('Failed to show pet:', e); }
+      } else {
+        try {
+          await window.electronAPI.pet.hide('default');
+        } catch (e) { /* ignore */ }
+        petShown.value = false;
+      }
+    };
+
+    const togglePetWindow = async () => {
+      try {
+        const result = await window.electronAPI.pet.toggle('default');
+        petShown.value = !!(result && result.opened);
+      } catch (e) { console.error('Failed to toggle pet:', e); }
+    };
+
+    const onPetCharacterChange = async () => {
+      try {
+        await window.electronAPI.pet.setState('default', { character_id: petCharacterId.value });
+      } catch (e) { console.error('Failed to set pet character:', e); }
+    };
+
+    /**
+     * Reset the pet state to defaults. Called from the settings panel
+     * after a user confirmation dialog.
+     */
+    const resetPet = async () => {
+      if (!confirm(t('petResetConfirm'))) return;
+      try {
+        await window.electronAPI.pet.setState('default', {
+          level: 1, xp: 0, mood: 50, energy: 100, intimacy: 0, daily_streak: 0, outfit: 'none'
+        });
+        await refreshPetState();
+      } catch (e) { console.error('resetPet failed:', e); }
+    };
+
+    /**
+     * Switch the active outfit. Validates against the unlock table and the
+     * currently-equipped level before writing to DB.
+     */
+    const PET_OUTFIT_UNLOCKS = { hat: 5, glasses: 6, crown: 9 };
+    const onPetOutfitChange = async () => {
+      const outfit = petOutfit.value || 'none';
+      const requiredLevel = PET_OUTFIT_UNLOCKS[outfit];
+      const cur = (petState.value && petState.value.level) || 1;
+      if (requiredLevel && cur < requiredLevel) {
+        // Snap back to current DB outfit — user can't equip a locked item.
+        petOutfit.value = (petState.value && petState.value.outfit) || 'none';
+        return;
+      }
+      try {
+        await window.electronAPI.pet.setState('default', { outfit: outfit });
+        await refreshPetState();
+      } catch (e) { console.error('onPetOutfitChange failed:', e); }
+    };
+
+    const isOutfitUnlocked = (name) => {
+      if (name === 'none') return true;
+      const req = PET_OUTFIT_UNLOCKS[name];
+      if (!req) return false;
+      const cur = (petState.value && petState.value.level) || 1;
+      return cur >= req;
+    };
+
+    /**
+     * Daily-streak reward: when the user has completed every active todo,
+     * award +50 XP (once per day). We use a sidebar_state key to dedupe.
+     */
+    const checkAndAwardDailyStreak = async (allTodos) => {
+      try {
+        const today = new Date();
+        const ymd = today.getFullYear() + '-' +
+          String(today.getMonth() + 1).padStart(2, '0') + '-' +
+          String(today.getDate()).padStart(2, '0');
+        const awardKey = 'pet_daily_streak_awarded_' + ymd;
+        if (await window.electronAPI.sidebar.getState(awardKey)) return;
+        // Active = not archived, not deleted. If there are zero active todos,
+        // skip the reward.
+        const active = (allTodos || []).filter(function (t) {
+          if (!t) return false;
+          if (t.is_archived || t.deleted_at) return false;
+          return true;
+        });
+        if (active.length === 0) return;
+        const allDone = active.every(function (t) { return t.completed === 1; });
+        if (!allDone) return;
+        await window.electronAPI.sidebar.setState(awardKey, '1');
+        // Increment the streak counter (it lives in pet_state).
+        const before = (petState.value && petState.value.daily_streak) || 0;
+        try {
+          await window.electronAPI.pet.setState('default', { daily_streak: before + 1 });
+        } catch (_) {}
+        // Use the global awardPetXp helper so the daily reward goes through
+        // the same path as other triggers (and skips when pet is disabled).
+        if (window.stickyTodoAwardXp) window.stickyTodoAwardXp(50, 'dailyClear');
+        await refreshPetState();
+      } catch (e) { /* ignore */ }
+    };
+
+    // Expose handlers used by sub-components via window so child setup
+    // closures can call them without prop-drilling.
+    window.stickyTodoAwardXp = (amount, eventName, moodDelta) => {
+      try {
+        if (!petEnabled.value) return;
+        const api = window.electronAPI && window.electronAPI.pet;
+        if (!api || !api.addXp) return;
+        const p = api.addXp('default', amount, eventName || 'unknown', moodDelta);
+        if (p && typeof p.then === 'function') {
+          p.then(function (newState) {
+            if (newState && typeof newState === 'object') petState.value = newState;
+          }).catch(function () { /* ignore */ });
+        }
+      } catch (_) { /* ignore */ }
+    };
+    window.stickyTodoCheckDailyStreak = checkAndAwardDailyStreak;
+
+    // IPC listeners: open settings modal + new todo editor when the pet
+    // window asks via right-click menu. Both routes land on settings for
+    // Stage 1+2 — a dedicated "add todo" gesture is Stage 4.
+    const onPetOpenSettings = () => { showSettings.value = true; };
+    // B5 fix: "New todo" from pet right-click now switches to the todos tab
+    // and opens the todo editor directly, matching user expectation.
+    const onPetNewTodo = () => {
+      currentTab.value = 'todos';
+      showNewTodoEditor();
+    };
+
+
     const onOpacityChange = async () => {
       try {
         await window.electronAPI.window.setOpacity(opacity.value);
@@ -5478,7 +6046,39 @@ const App = {
       resetPomodoro,
       importResultMsg,
       onImportFile,
-      NOTE_COLORS
+      NOTE_COLORS,
+    // ---- Desktop pet (Stage 1+2, Stage 3 additions: outfit + reset, Stage 5+6) ----
+    petEnabled,
+    petShown,
+    petState,
+    petPacks,
+    petCharacterId,
+    petOutfit,
+    refreshPetState,
+    loadPetPacks,
+    onPetEnabledChange,
+    togglePetWindow,
+    onPetCharacterChange,
+    resetPet,
+    onPetOutfitChange,
+    isOutfitUnlocked,
+    petXpToNext,
+    petXpPercent,
+    // Stage 5+6
+    petList,
+    newPetPackId,
+    petFollowTheme,
+    petTheme,
+    refreshPetList,
+    petPackLabel,
+    shortPetId,
+    createNewPet,
+    openPetFromList,
+    closePetFromList,
+    morphPetFromList,
+    breedablePairs,
+    breedFirstPair,
+    onPetFollowThemeChange,
     };
   }
 };

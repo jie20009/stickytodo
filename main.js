@@ -19,7 +19,7 @@
  * launches cleanly.
  */
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, screen, nativeImage, Notification } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, globalShortcut, screen, nativeImage, nativeTheme, Notification } = require('electron');
 const fs   = require('fs');
 const os   = require('os');
 const path = require('path');
@@ -54,6 +54,10 @@ const FLOATING_TODO_W    = 400;
 const FLOATING_TODO_H    = 400;
 const SIDEBAR_HTML       = 'index.html'; // single HTML for sidebar + floating notes
 const FLOATING_NOTE_HTML = 'index.html'; // floating windows reuse index.html; renderer detects noteId
+// ---- Pet window (StickyTodo Desktop Pet, Stage 1+2) ----
+const PET_W              = 64;
+const PET_H              = 64;
+const PET_HTML           = 'pet.html';
 const PRELOAD_PATH       = path.join(__dirname, 'preload.js');
 let currentShortcut      = 'Super+Alt+S';
 
@@ -73,6 +77,18 @@ let tray = null;
 /** @type {Map<number|string, Electron.BrowserWindow>} */
 const floatingNotes = new Map();
 const floatingTodos = new Map();
+// Pet windows keyed by pet_id (Stage 1+2: only 'default' is used).
+/** @type {Map<string, Electron.BrowserWindow>} */
+const petWindows = new Map();
+// Default petId; Stage 5 will support multiple pets.
+const DEFAULT_PET_ID = 'default';
+
+// Stage 5: per-pet mouse-chase intervals (so multiple pets can chase independently).
+/** @type {Map<string, NodeJS.Timeout>} */
+const chaseIntervals = new Map();
+// Track which pet is currently chasing for cleanup on quit.
+/** @type {Set<string>} */
+const chasingPets = new Set();
 
 // `app.isQuitting` is the conventional flag for "user really wants to exit".
 app.isQuitting = false;
@@ -485,6 +501,423 @@ function closeFloatingTodo(todoId) {
   }
   return { closed: false, todoId: key, reason: 'not-open' };
 }
+
+// ---------------------------------------------------------------------------
+// Pet windows (StickyTodo Desktop Pet, Stage 1+2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Open (or focus) the desktop pet window for a given petId.
+ *
+ * Stage 1+2 only supports a single 'default' pet; the window is small,
+ * transparent, always-on-top, frameless, and not in the taskbar.
+ * Position is restored from DB; default falls back to bottom-right.
+ */
+function openPetWindow(petId, options) {
+  const id = String(petId || DEFAULT_PET_ID);
+  const opts = options || {};
+
+  const existing = petWindows.get(id);
+  if (existing && !existing.isDestroyed()) {
+    if (!existing.isVisible()) existing.show();
+    existing.focus();
+    return existing;
+  }
+
+  // Restore saved position from pet_state table (if any).
+  let state = null;
+  try { state = db.getPetState(id); } catch (_) { state = null; }
+
+  const display = screen.getPrimaryDisplay();
+  const work = display.workArea;
+  const workW = work.width;
+  const workH = work.height;
+  const workY = work.y;
+
+  let posX, posY;
+  if (state && state.pet_x != null && state.pet_y != null) {
+    posX = state.pet_x;
+    posY = state.pet_y;
+  } else {
+    posX = Math.max(0, work.x + workW - PET_W - 24);
+    posY = Math.max(workY, work.y + workH - PET_H - 24);
+  }
+  // Clamp to current display in case monitor layout changed.
+  posX = Math.max(work.x, Math.min(work.x + workW - PET_W, posX));
+  posY = Math.max(workY,  Math.min(work.y  + workH - PET_H, posY));
+
+  const win = new BrowserWindow({
+    width: PET_W,
+    height: PET_H,
+    x: posX,
+    y: posY,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: opts.alwaysOnTop !== false,
+    skipTaskbar: true,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    hasShadow: false,
+    show: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: PRELOAD_PATH,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      backgroundThrottling: false,
+      additionalArguments: [
+        `--stickytodo-pet-id=${id}`,
+        `--stickytodo-screen-w=${workW}`,
+        `--stickytodo-screen-h=${workH}`,
+        `--stickytodo-work-y=${workY}`,
+      ],
+    },
+  });
+
+  win.once('ready-to-show', () => {
+    if (!win.isDestroyed()) win.show();
+  });
+
+  win.on('closed', () => {
+    if (petWindows.get(id) === win) petWindows.delete(id);
+  });
+
+  // Best-effort position sync: when the user lets go of a drag (which the
+  // renderer fires before mouseup IPC), the renderer-side debounce will save
+  // the final position via pet:setPosition. We also flush on close below.
+  win.on('close', () => {
+    try {
+      if (!win.isDestroyed()) {
+        const b = win.getBounds();
+        db.updatePetState(id, { pet_x: b.x, pet_y: b.y });
+      }
+    } catch (_) { /* best-effort */ }
+  });
+
+  safeLoadFile(win, PET_HTML);
+
+  // ── Hard-lock the pet window to PET_W × PET_H ─────────────────────────
+  // On Windows, transparent frameless windows can be silently resized by the
+  // OS during window.moveTo() (DPI scaling, DWM compositing). Block user-initiated
+  // resizes; programmatic resizes via pet:resizeWindow are allowed (for dialogue).
+  win.on('will-resize', (e) => { e.preventDefault(); });
+
+  // Make the pet window click-through by default so it never blocks other apps.
+  // The renderer sends 'pet:setHitRegion' IPC when cursor is over the emoji
+  // to temporarily disable ignoreMouseEvents and allow clicks/drag.
+  win.setIgnoreMouseEvents(true, { forward: true });
+
+  petWindows.set(id, win);
+  return win;
+}
+
+function closePetWindow(petId) {
+  const id = String(petId || DEFAULT_PET_ID);
+  const win = petWindows.get(id);
+  if (win && !win.isDestroyed()) {
+    win.close();
+    return { closed: true, petId: id };
+  }
+  return { closed: false, petId: id, reason: 'not-open' };
+}
+
+function closeAllPetWindows() {
+  let count = 0;
+  for (const [, w] of petWindows) {
+    try { if (w && !w.isDestroyed()) { w.close(); count++; } } catch (_) {}
+  }
+  petWindows.clear();
+  return { closed: count };
+}
+
+/**
+ * Broadcast the pet state to all open pet windows AND the main sidebar
+ * so multiple subscribers can re-render their expression.
+ *
+ * `opts.event` (optional) names the source of the change so renderers
+ * can show a one-shot reaction (e.g. happy expression, dialogue line).
+ */
+function broadcastPetState(petId, state, opts) {
+  const payload = { petId: String(petId || DEFAULT_PET_ID), state: state };
+  if (opts && opts.event) payload.event = String(opts.event);
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
+      win.webContents.send('pet:changed', payload);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Stage 5: Mouse chase + multi-pet + morph + breed + climb-own-windows
+// ---------------------------------------------------------------------------
+
+/**
+ * Start chasing the cursor with the given pet window. Uses screen.getCursorScreenPoint()
+ * + setInterval(50ms) + lerp easing (factor 0.05) for smooth pursuit. Stops automatically
+ * once the pet is within 10px of the cursor. Persists `chasing=1` to pet_state so a
+ * reload of the app can decide whether to resume.
+ */
+function startMouseChase(petId) {
+  const id = String(petId || DEFAULT_PET_ID);
+  // Already chasing? Just no-op.
+  if (chaseIntervals.has(id)) return { chasing: true, petId: id };
+
+  const win = petWindows.get(id);
+  if (!win || win.isDestroyed()) return { error: 'pet window not open', petId: id };
+
+  chasingPets.add(id);
+  try { db.updatePetState(id, { chasing: 1 }); } catch (_) { /* best-effort */ }
+
+  const interval = setInterval(() => {
+    const w = petWindows.get(id);
+    if (!w || w.isDestroyed()) {
+      stopMouseChase(id);
+      return;
+    }
+    let cursor;
+    try { cursor = screen.getCursorScreenPoint(); } catch (_) { return; }
+    if (!cursor) return;
+    let bounds;
+    try { bounds = w.getBounds(); } catch (_) { return; }
+    // Target: position the pet so its center sits on the cursor.
+    const targetX = Math.round(cursor.x - bounds.width / 2);
+    const targetY = Math.round(cursor.y - bounds.height / 2);
+    const dx = targetX - bounds.x;
+    const dy = targetY - bounds.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 10) {
+      // Close enough — snap to target and stop.
+      try { w.setPosition(targetX, targetY); } catch (_) {}
+      stopMouseChase(id);
+      return;
+    }
+    const newX = Math.round(bounds.x + dx * 0.05);
+    const newY = Math.round(bounds.y + dy * 0.05);
+    try { w.setPosition(newX, newY); } catch (_) { /* ignore */ }
+  }, 50);
+
+  chaseIntervals.set(id, interval);
+  // Notify renderer so it can switch expression to 'walk'.
+  broadcastPetState(id, db.getPetState(id), { event: 'chasing' });
+  return { chasing: true, petId: id };
+}
+
+function stopMouseChase(petId) {
+  const id = String(petId || DEFAULT_PET_ID);
+  const timer = chaseIntervals.get(id);
+  if (timer) {
+    clearInterval(timer);
+    chaseIntervals.delete(id);
+  }
+  if (!chasingPets.has(id)) return { chasing: false, petId: id };
+  chasingPets.delete(id);
+  try { db.updatePetState(id, { chasing: 0 }); } catch (_) { /* best-effort */ }
+  broadcastPetState(id, db.getPetState(id), { event: 'chaseStop' });
+  return { chasing: false, petId: id };
+}
+
+function isChasing(petId) {
+  return chasingPets.has(String(petId || DEFAULT_PET_ID));
+}
+
+/**
+ * Stage 5: list all known pet IDs — both those with an open BrowserWindow
+ * (petWindows Map) and any persisted rows in pet_state (so the user can see
+ * pets they've closed but not deleted).
+ */
+function listAllPets() {
+  const ids = new Set();
+  for (const id of petWindows.keys()) ids.add(id);
+  let rows = [];
+  try {
+    rows = db.getAllPetStates ? db.getAllPetStates() : [];
+  } catch (_) { rows = []; }
+  for (const r of rows) {
+    if (r && r.pet_id) ids.add(r.pet_id);
+  }
+  // Make sure the default pet always shows up.
+  ids.add(DEFAULT_PET_ID);
+  const out = [];
+  for (const id of ids) {
+    const state = (() => { try { return db.getPetState(id); } catch (_) { return null; } })();
+    if (!state) continue;
+    out.push({
+      pet_id:       state.pet_id,
+      level:        state.level || 1,
+      mood:         state.mood || 0,
+      energy:       state.energy || 0,
+      intimacy:     state.intimacy || 0,
+      outfit:       state.outfit || 'none',
+      character_id: state.character_id || 'default',
+      chasing:      state.chasing ? 1 : 0,
+      open:         petWindows.has(id),
+    });
+  }
+  return out;
+}
+
+/**
+ * Stage 5: create a brand-new pet. Generates a unique pet_id (pet_<ts>_<rand>),
+ * inserts a fresh pet_state row, and opens a new BrowserWindow.
+ */
+function createPet(characterPackId) {
+  const ts = Date.now();
+  const rnd = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+  const id = `pet_${ts}_${rnd}`;
+  // Insert pet_state row (getPetState auto-creates a default; we then patch character_id).
+  try { db.getPetState(id); } catch (_) { /* ignore */ }
+  const packId = characterPackId || 'default';
+  try { db.updatePetState(id, { character_id: packId }); } catch (_) { /* ignore */ }
+  const win = openPetWindow(id);
+  return { petId: id, characterId: packId, opened: !!(win && !win.isDestroyed()) };
+}
+
+/**
+ * Stage 5: breed two existing pets. Requires BOTH parents to have intimacy >= 300.
+ * The offspring inherits average mood/energy of both parents + half intimacy,
+ * starts at level 1, xp 0, and gets its own pet_id (pet_breed_<ts>).
+ */
+function breedPets(petIdA, petIdB) {
+  const a = (() => { try { return db.getPetState(petIdA); } catch (_) { return null; } })();
+  const b = (() => { try { return db.getPetState(petIdB); } catch (_) { return null; } })();
+  if (!a) return { error: 'parent A not found', petId: petIdA };
+  if (!b) return { error: 'parent B not found', petId: petIdB };
+  const intA = Number(a.intimacy) || 0;
+  const intB = Number(b.intimacy) || 0;
+  if (intA < 300) return { error: 'parent A intimacy below 300', petId: petIdA, intimacy: intA };
+  if (intB < 300) return { error: 'parent B intimacy below 300', petId: petIdB, intimacy: intB };
+
+  const newId = `pet_breed_${Date.now()}`;
+  try { db.getPetState(newId); } catch (_) { /* ignore */ }
+  const avgMood = Math.round(((Number(a.mood) || 0) + (Number(b.mood) || 0)) / 2);
+  const avgEnergy = Math.round(((Number(a.energy) || 0) + (Number(b.energy) || 0)) / 2);
+  const inheritIntimacy = Math.round(((intA + intB) / 2) / 2);
+  try {
+    db.updatePetState(newId, {
+      level: 1, xp: 0,
+      mood: avgMood, energy: avgEnergy,
+      intimacy: inheritIntimacy,
+      daily_streak: 0,
+      outfit: 'none',
+      character_id: a.character_id || 'default',
+    });
+  } catch (e) {
+    return { error: 'failed to write offspring row', detail: e.message };
+  }
+  // Small bonus XP to both parents.
+  try { db.addPetXp(petIdA, 5, 'breedParent', null); } catch (_) {}
+  try { db.addPetXp(petIdB, 5, 'breedParent', null); } catch (_) {}
+  const win = openPetWindow(newId);
+  return {
+    petId: newId, parentA: petIdA, parentB: petIdB,
+    opened: !!(win && !win.isDestroyed()),
+    inherited: { mood: avgMood, energy: avgEnergy, intimacy: inheritIntimacy },
+  };
+}
+
+/**
+ * Stage 5: morph an existing pet to a new character pack. The same BrowserWindow
+ * is reused; the renderer receives a 'pet:morph' event and re-creates the
+ * PetRenderer with the new pack.
+ */
+function morphPet(petId, packId) {
+  const id = String(petId || DEFAULT_PET_ID);
+  const win = petWindows.get(id);
+  if (!win || win.isDestroyed()) return { error: 'pet window not open', petId: id };
+  if (!packId) return { error: 'packId required' };
+  try { db.updatePetState(id, { character_id: String(packId) }); } catch (_) {}
+  try {
+    if (!win.webContents.isDestroyed()) {
+      win.webContents.send('pet:morph', { packId: String(packId) });
+    }
+  } catch (_) {}
+  return { morphed: true, petId: id, packId: String(packId) };
+}
+
+/**
+ * Stage 5/6.3: climb-own-windows. If the pet window is within 20px of any
+ * other Electron BrowserWindow's edge, snap the pet onto that edge (the pet
+ * 'climbs' up onto the window). Only affects our own windows (BrowserWindow.getAllWindows());
+ * external-app windows would require a native addon (out of scope).
+ */
+function climbOwnWindows(petId) {
+  const id = String(petId || DEFAULT_PET_ID);
+  const petWin = petWindows.get(id);
+  if (!petWin || petWin.isDestroyed()) return { climbed: false };
+  let petBounds;
+  try { petBounds = petWin.getBounds(); } catch (_) { return { climbed: false }; }
+  const petCenterX = petBounds.x + petBounds.width / 2;
+  const petCenterY = petBounds.y + petBounds.height / 2;
+
+  const EDGE_THRESHOLD = 20;
+  let best = null;
+  let bestDist = Infinity;
+
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win || win.isDestroyed()) continue;
+    if (win === petWin) continue;
+    // Skip hidden / minimized windows — we can't climb what isn't visible.
+    if (!win.isVisible() || win.isMinimized()) continue;
+    let b;
+    try { b = win.getBounds(); } catch (_) { continue; }
+    // Skip pet-style always-on-top transparent windows (they're decoration, not desktop furniture).
+    const wOpts = win.getOptions ? win.getOptions() : null;
+    if (wOpts && wOpts.transparent && wOpts.skipTaskbar && (!wOpts.alwaysOnTop || wOpts.alwaysOnTop === false)) {
+      // ok, treat as a target
+    }
+    // Compute distance from pet center to the window rectangle's nearest edge.
+    const nearestX = Math.max(b.x, Math.min(petCenterX, b.x + b.width));
+    const nearestY = Math.max(b.y, Math.min(petCenterY, b.y + b.height));
+    const dx = petCenterX - nearestX;
+    const dy = petCenterY - nearestY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < EDGE_THRESHOLD && dist < bestDist) {
+      bestDist = dist;
+      best = b;
+    }
+  }
+
+  if (!best) return { climbed: false };
+
+  // Snap pet to sit ON TOP of the target window's top edge, centered horizontally.
+  const newX = Math.round(best.x + (best.width / 2) - (petBounds.width / 2));
+  const newY = Math.round(best.y - petBounds.height + 4);
+  try { petWin.setPosition(newX, newY); } catch (_) { /* ignore */ }
+  broadcastPetState(id, db.getPetState(id), { event: 'climbing' });
+  return { climbed: true, target: best };
+}
+
+// ---------------------------------------------------------------------------
+// Stage 6: Theme follow (nativeTheme) — broadcast updates so renderers can
+// adapt their visuals (e.g. lighter pet bubble on dark theme).
+// ---------------------------------------------------------------------------
+
+function currentTheme() {
+  try { return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'; }
+  catch (_) { return 'dark'; }
+}
+
+function broadcastTheme() {
+  const theme = currentTheme();
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
+      win.webContents.send('settings:changed', { theme: theme, source: 'system' });
+    }
+  }
+}
+
+function registerThemeFollow() {
+  try {
+    nativeTheme.on('updated', () => {
+      try { broadcastTheme(); } catch (_) { /* ignore */ }
+    });
+  } catch (_) { /* no-op on platforms without nativeTheme */ }
+}
+
+
 
 // ---------------------------------------------------------------------------
 // Tray
@@ -966,6 +1399,312 @@ function registerIpcHandlers() {
     if (dragTracker) { clearInterval(dragTracker); dragTracker = null; }
     if (dragOutsideTimer) { clearTimeout(dragOutsideTimer); dragOutsideTimer = null; }
   });
+
+  // -------------------------------------------------------------------------
+  // Pet (StickyTodo Desktop Pet, Stage 1+2)
+  // -------------------------------------------------------------------------
+
+  // pet:show — show the pet window (creates if needed, or unhides existing)
+  ipcMain.handle('pet:show', safe(async (_evt, petId) => {
+    const id = String(petId || DEFAULT_PET_ID);
+    const existing = petWindows.get(id);
+    if (existing && !existing.isDestroyed()) {
+      if (!existing.isVisible()) existing.show();
+      existing.focus();
+      return { opened: true, petId: id };
+    }
+    openPetWindow(id);
+    return { opened: true, petId: id };
+  }));
+
+// pet:hide — HIDE the pet window (not close), so it can be shown again without
+// losing state or position.  HIGH-3 fix: previously called closePetWindow
+// which destroyed the window; now uses setVisible(false).
+ipcMain.handle('pet:hide', safe(async (_evt, petId) => {
+  const id = String(petId || DEFAULT_PET_ID);
+  const win = petWindows.get(id);
+  if (win && !win.isDestroyed()) {
+    win.hide();
+    return { hidden: true, petId: id };
+  }
+  return { hidden: false, petId: id, reason: 'not-open' };
+}));
+
+  // pet:toggle — show if hidden, hide if shown
+  ipcMain.handle('pet:toggle', safe(async (_evt, petId) => {
+    const id = String(petId || DEFAULT_PET_ID);
+    const existing = petWindows.get(id);
+    if (existing && !existing.isDestroyed() && existing.isVisible()) {
+      closePetWindow(id);
+      return { opened: false, petId: id };
+    }
+    openPetWindow(id);
+    return { opened: true, petId: id };
+  }));
+
+  // pet:setPosition — renderer reports window bounds after drag/throw ends
+  ipcMain.handle('pet:setPosition', safe(async (_evt, payload) => {
+    const id = String(payload && payload.petId || DEFAULT_PET_ID);
+    const x = payload && Number.isFinite(payload.x) ? Math.round(payload.x) : null;
+    const y = payload && Number.isFinite(payload.y) ? Math.round(payload.y) : null;
+    if (x == null || y == null) return { error: 'invalid coords' };
+    db.updatePetState(id, { pet_x: x, pet_y: y });
+    return { x: x, y: y };
+  }));
+
+  // pet:getState — fetch the persisted pet state
+  ipcMain.handle('pet:getState', safe(async (_evt, petId) => db.getPetState(petId)));
+
+  // pet:setState — update arbitrary pet fields (used by future stages)
+  ipcMain.handle('pet:setState', safe(async (_evt, petId, updates) => {
+    const before = db.getPetState(petId);
+    const updated = db.updatePetState(petId, updates || {});
+    // Detect level-up and surface it as a distinct event so the renderer
+    // can show the level-up animation.
+    var evt = null;
+    if (updated && before && Number(updated.level) > Number(before.level)) {
+      evt = 'levelUp';
+    } else if (updates && updates.outfit !== undefined) {
+      evt = 'outfitChange';
+    } else if (updates && (updates.mood !== undefined || updates.energy !== undefined || updates.intimacy !== undefined)) {
+      evt = 'stateUpdate';
+    }
+    broadcastPetState(petId, updated, { event: evt });
+    // HIGH-7 fix: if character_id changed, tell the pet window to reload its
+    // character pack via pet:morph so the displayed pet actually updates.
+    if (updates && updates.character_id !== undefined && before && updates.character_id !== before.character_id) {
+      const win = petWindows.get(String(petId || DEFAULT_PET_ID));
+      if (win && !win.isDestroyed()) {
+        try { win.webContents.send('pet:morph', { packId: updates.character_id }); } catch (_) {}
+      }
+    }
+    return updated;
+  }));
+
+  // pet:addXp — award XP, log event, broadcast new state (Stage 3 fully wired).
+  // If the call causes a level-up, broadcast event='levelUp' so the renderer
+  // can trigger the celebration animation.
+  ipcMain.handle('pet:addXp', safe(async (_evt, petId, amount, event, moodDelta) => {
+    const before = db.getPetState(petId);
+    const updated = db.addPetXp(petId, amount, event || 'unknown', moodDelta);
+    var evt = event || 'unknown';
+    if (updated && before && Number(updated.level) > Number(before.level)) {
+      evt = 'levelUp';
+    }
+    broadcastPetState(petId, updated, { event: evt });
+    return updated;
+  }));
+
+  /**
+   * Helper: apply a mood / intimacy / energy bump together with an XP award
+   * for an interaction event (click / pet / feed). Bumps are applied to the
+   * pre-existing values (not absolute), so e.g. clicking twice adds +2 mood.
+   */
+  function applyInteraction(petId, eventName, xpAmount, moodBump, energyBump, intimacyBump) {
+    const id = String(petId || DEFAULT_PET_ID);
+    const before = db.getPetState(id);
+    if (!before) return null;
+    const newMood = Math.max(0, Math.min(100, (before.mood || 0) + (moodBump || 0)));
+    const newEnergy = Math.max(0, Math.min(100, (before.energy || 0) + (energyBump || 0)));
+    const newIntimacy = Math.max(0, Math.min(1000, (before.intimacy || 0) + (intimacyBump || 0)));
+    // Write the three fields, then run addPetXp which also handles level-up.
+    db.updatePetState(id, { mood: newMood, energy: newEnergy, intimacy: newIntimacy });
+    const updated = db.addPetXp(id, xpAmount || 0, eventName, null);
+    var evt = eventName;
+    if (updated && Number(updated.level) > Number(before.level || 1)) {
+      evt = 'levelUp';
+    }
+    broadcastPetState(id, updated, { event: evt });
+    return updated;
+  }
+
+  // pet:feed — feed the pet (Stage 4 interaction).
+  ipcMain.handle('pet:feed', safe(async (_evt, petId) => {
+    return applyInteraction(petId, 'feed', 5, 5, 20, 2);
+  }));
+
+  // pet:pet — pet/stroke the pet (Stage 4 interaction, longer affection).
+  ipcMain.handle('pet:pet', safe(async (_evt, petId) => {
+    return applyInteraction(petId, 'pet', 2, 2, 0, 3);
+  }));
+
+  // pet:click — quick click (Stage 4 interaction, smallest bump).
+  ipcMain.handle('pet:click', safe(async (_evt, petId) => {
+    return applyInteraction(petId, 'click', 1, 1, 0, 1);
+  }));
+
+  // pet:dragStart / pet:dragStop — renderer-side signals (Stage 5 chase mouse)
+  ipcMain.on('pet:dragStart', (_evt, _payload) => { /* placeholder */ });
+  ipcMain.on('pet:dragStop',  (_evt, _payload) => { /* placeholder */ });
+
+  // pet:setHitRegion — toggle click-through for transparent pet window.
+  // When active=true, the emoji region captures clicks; otherwise clicks pass through.
+  ipcMain.on('pet:setHitRegion', (evt, active) => {
+    try {
+      const win = BrowserWindow.fromWebContents(evt.sender);
+      if (win && !win.isDestroyed()) {
+        win.setIgnoreMouseEvents(!active, { forward: true });
+      }
+    } catch (_) { /* best-effort */ }
+  });
+
+  // pet:moveWindow — move pet window with enforced 64×64 size.
+  // renderer's window.moveTo() can trigger silent resize on Windows DPI scaling.
+  ipcMain.on('pet:moveWindow', (evt, x, y) => {
+    try {
+      const win = BrowserWindow.fromWebContents(evt.sender);
+      if (win && !win.isDestroyed()) {
+        const b = win.getBounds();
+        // Keep current size (may be expanded for dialogue); only change position.
+        win.setBounds({ x: x, y: y, width: b.width, height: b.height });
+      }
+    } catch (_) { /* best-effort */ }
+  });
+
+  // pet:resizeWindow — expand/shrink pet window to fit dialogue bubble.
+  // The pet (64×64, centered horizontally in window) must stay at the same
+  // screen position, so we shift the window x accordingly.
+  ipcMain.on('pet:resizeWindow', (evt, w, h) => {
+    try {
+      const win = BrowserWindow.fromWebContents(evt.sender);
+      if (!win || win.isDestroyed()) return;
+      const b = win.getBounds();
+      // Keep pet center at same screen x: pet_center = win_x + (win_w - 64)/2 + 32
+      // new_win_x = old_win_x + (old_w - new_w) / 2
+      const newX = Math.round(b.x + (b.width - w) / 2);
+      win.setBounds({ x: newX, y: b.y, width: w, height: h });
+    } catch (_) { /* best-effort */ }
+  });
+
+  // pet:showContextMenu — show native Electron context menu at screen coords.
+  // Replaces the in-window custom menu that was clipped by the 64×64 window.
+  ipcMain.handle('pet:showContextMenu', safe(async (_evt, screenX, screenY, state) => {
+    const petId = state && state.petId ? state.petId : DEFAULT_PET_ID;
+    const isChasing = !!(state && state.isChasing);
+    const menu = Menu.buildFromTemplate([
+      { label: 'Show sidebar',  click: () => toggleSidebar() },
+      { label: 'New todo',      click: () => showMainWindowAndSend('pet:newTodo') },
+      { label: 'Open settings', click: () => showMainWindowAndSend('pet:openSettings') },
+      { type: 'separator' },
+      { label: (isChasing ? '✓ ' : '') + 'Chase mouse', click: () => {
+          if (isChasing) stopMouseChase(petId); else startMouseChase(petId);
+        } },
+      { label: 'Climb window', click: () => climbOwnWindows(petId) },
+      { type: 'separator' },
+      { label: 'Feed pet',  click: () => applyInteraction(petId, 'feed', 5, 5, 20, 2) },
+      { label: 'Hide pet',  click: () => { const w = petWindows.get(String(petId||DEFAULT_PET_ID)); if (w && !w.isDestroyed()) w.hide(); } },
+      { label: 'Close pet', click: () => closePetWindow(petId) },
+    ]);
+    menu.popup({ x: Math.round(screenX), y: Math.round(screenY) });
+    return true;
+  }));
+
+  // pet:listPacks — character packs from ./pet.js
+  ipcMain.handle('pet:listPacks', safe(async () => {
+    const pet = require('./pet');
+    return pet.listCharacterPacks().map(function (p) {
+      // Strip non-serializable basePath (absolute path) — keep packDir only.
+      return {
+        id: p.id,
+        name: p.name,
+        emoji: p.emoji,
+        animations: p.animations,
+        sounds: p.sounds || {},
+        packDir: p.packDir,
+      };
+    });
+  }));
+
+  // pet:getPack — single pack by id
+  ipcMain.handle('pet:getPack', safe(async (_evt, id) => {
+    const pet = require('./pet');
+    const p = pet.getCharacterPack(id);
+    if (!p) return null;
+    return {
+      id: p.id,
+      name: p.name,
+      emoji: p.emoji,
+      animations: p.animations,
+      sounds: p.sounds || {},
+      packDir: p.packDir,
+    };
+  }));
+
+  // pet:feed / pet:pet / pet:click — interaction handlers are defined earlier
+  // (lines ~1213–1226) using the shared applyInteraction() helper.
+
+  // pet:close — close this pet's window (used by right-click menu)
+  ipcMain.handle('pet:close', safe(async (_evt, petId) => closePetWindow(petId)));
+
+  // pet:toggleSidebar — used by right-click menu
+  ipcMain.handle('pet:toggleSidebar', safe(async () => {
+    toggleSidebar();
+    return { ok: true };
+  }));
+
+  // Helper: show+focus the main sidebar window, then send an IPC to it.
+  // Used by both the pet:newTodo / pet:openSettings IPC handlers AND the
+  // native context menu click handlers so the show/restore/focus logic
+  // lives in one place (B1 fix — previously the menu path skipped this).
+  function showMainWindowAndSend(channel) {
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return;
+    mainWindow.webContents.send(channel);
+    if (!mainWindow.isVisible()) mainWindow.show();
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+
+  // pet:openSettings — ask the main sidebar to open the settings modal
+  ipcMain.handle('pet:openSettings', safe(async () => {
+    showMainWindowAndSend('pet:openSettings');
+    return { ok: true };
+  }));
+
+  // pet:newTodo — ask the main sidebar to open the new-todo editor
+  ipcMain.handle('pet:newTodo', safe(async () => {
+    showMainWindowAndSend('pet:newTodo');
+    return { ok: true };
+  }));
+
+  // -------------------------------------------------------------------------
+  // Stage 5.1: Mouse chase
+  // -------------------------------------------------------------------------
+  ipcMain.handle('pet:chaseMouse', safe(async (_evt, petId) => startMouseChase(petId)));
+  ipcMain.handle('pet:stopChase',  safe(async (_evt, petId) => stopMouseChase(petId)));
+
+  // -------------------------------------------------------------------------
+  // Stage 5.2: Multi-pet
+  // -------------------------------------------------------------------------
+  ipcMain.handle('pet:create', safe(async (_evt, characterPackId) => createPet(characterPackId)));
+  ipcMain.handle('pet:list',   safe(async () => listAllPets()));
+  ipcMain.handle('pet:breed',  safe(async (_evt, petIdA, petIdB) => breedPets(petIdA, petIdB)));
+
+  // -------------------------------------------------------------------------
+  // Stage 5.3: Morph
+  // -------------------------------------------------------------------------
+  ipcMain.handle('pet:morph', safe(async (_evt, petId, packId) => morphPet(petId, packId)));
+
+  // -------------------------------------------------------------------------
+  // Stage 6.3: Climb own windows
+  // -------------------------------------------------------------------------
+  ipcMain.handle('pet:climbWindows', safe(async (_evt, petId) => climbOwnWindows(petId)));
+
+  // -------------------------------------------------------------------------
+  // Stage 6.2: Theme follow (current theme + manual override)
+  // -------------------------------------------------------------------------
+  ipcMain.handle('settings:getTheme', safe(async () => ({ theme: currentTheme() })));
+  ipcMain.handle('settings:setTheme', safe(async (_evt, theme) => {
+    // Manual override. If the user picked a value, we store it; petFollowTheme
+    // determines whether the system theme or the manual choice wins.
+    const normalized = (theme === 'light' || theme === 'dark') ? theme : null;
+    if (normalized) {
+      try { db.setSidebarState('theme', normalized); } catch (_) {}
+    } else {
+      try { db.setSidebarState('theme', ''); } catch (_) {}
+    }
+    broadcastTheme();
+    return { theme: currentTheme(), manual: normalized };
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -1013,6 +1752,21 @@ if (!gotTheLock) {
       logError('db.init() OK');
       // Auto-purge trash older than 30 days on startup
       try { const purged = db.purgeOldTrash(30); if (purged.notesPurged || purged.todosPurged) logError(`Trash purged: ${JSON.stringify(purged)}`); } catch (e) { logError(`purgeOldTrash failed: ${e}`); }
+      // One-time fix: reset energy to 100 and mood to baseline (50) for all
+      // existing pets that were affected by the old energy-decay-to-sleep bug.
+      try {
+        const allPets = db.getAllPetStates ? db.getAllPetStates() : [];
+        for (const pet of allPets) {
+          if (!pet || !pet.pet_id) continue;
+          let fix = {};
+          if (typeof pet.energy === 'number' && pet.energy < 80) fix.energy = 100;
+          if (typeof pet.mood === 'number' && pet.mood < 30)    fix.mood = 50;
+          if (Object.keys(fix).length > 0) {
+            db.updatePetState(pet.pet_id, fix);
+            logError(`Pet ${pet.pet_id} state fixed: ${JSON.stringify(fix)}`);
+          }
+        }
+      } catch (e) { logError(`pet state fix failed: ${e}`); }
     } catch (err) {
       logError(`db.init() FAILED: ${err.stack || err}`);
     }
@@ -1020,6 +1774,34 @@ if (!gotTheLock) {
     createTray();
     registerIpcHandlers();
     registerGlobalShortcuts();
+
+    // Initialize the desktop pet character pack system. This scans
+    // ~/.stickytodo/img/ for character packs and ensures the built-in
+    // 'default' emoji pack is on disk. Non-throwing: pet stays hidden
+    // if anything fails.
+    try {
+      const pet = require('./pet');
+      pet.initPetSystem();
+    } catch (e) {
+      logError(`pet.initPetSystem failed: ${e && e.message ? e.message : e}`);
+    }
+
+    // Stage 6.2: register nativeTheme listener so every pet/sidebar window
+    // gets a settings:changed {theme, source:'system'} broadcast when the
+    // OS appearance flips.
+    try { registerThemeFollow(); } catch (e) { logError(`registerThemeFollow failed: ${e}`); }
+
+    // Auto-open the pet window if user has previously enabled it.
+    // Stored under sidebar_state key 'petEnabled' so it lives alongside
+    // other UI preferences.
+    try {
+      const enabled = db.getSidebarState('petEnabled');
+      if (enabled === 'true' || enabled === true) {
+        openPetWindow(DEFAULT_PET_ID);
+      }
+    } catch (e) {
+      logError(`petEnabled auto-open failed: ${e && e.message ? e.message : e}`);
+    }
 
     // Reminder check interval (every 60s)
     setInterval(() => {
@@ -1035,6 +1817,17 @@ if (!gotTheLock) {
             const notified = db.getSidebarState(notifiedKey);
             if (!notified) {
               db.setSidebarState(notifiedKey, '1');
+              // Broadcast to pet so it can show a dialogue bubble
+              try {
+                const petState = db.getPetState(DEFAULT_PET_ID);
+                if (petState) {
+                  broadcastPetState(DEFAULT_PET_ID, petState, {
+                    event: 'todoDue',
+                    dialogue: '提醒：' + todo.title,
+                    todoId: todo.id,
+                  });
+                }
+              } catch (_) { /* best-effort pet broadcast */ }
               try {
                 if (Notification.isSupported()) {
                   const n = new Notification({ title: 'StickyTodo', body: todo.title + ' — due soon' });
@@ -1059,11 +1852,51 @@ if (!gotTheLock) {
         logError(`Reminder check error: ${err.message}`);
       }
 
-      // Repeat task reset: check completed repeating todos
-      // OPT-04: Reuse the same todos array from above instead of querying again.
+      // Stage 3: Overdue detection — when a todo passes its due_date without
+      // being completed, the pet loses 5 XP (capped at once per overdue todo
+      // per day). The negative XP is logged with event='overdue' and the
+      // 'anxious' reaction fires.
       try {
+        const todos2 = db.getTodos();
         const now2 = new Date();
-        for (const todo of todos) {
+        for (const todo of todos2) {
+          if (todo.completed || !todo.due_date) continue;
+          const due = new Date(todo.due_date);
+          if (due >= now2) continue;     // not yet overdue
+          // Use a per-todo, per-day marker so the penalty only applies once
+          // per overdue event.
+          const overdueKey = `overdue_penalty_${todo.id}_${todo.due_date.split('T')[0]}`;
+          if (db.getSidebarState(overdueKey)) continue;
+          db.setSidebarState(overdueKey, '1');
+          try {
+            // db.addPetXp clamps amount to >=0 with Math.max(0, ...), so we
+            // call updatePetState directly to apply a negative mood/intimacy
+            // and then log the event via addPetXp with xp=0 (which still
+            // writes a pet_log row tagged 'overdue').
+            const before = db.getPetState(DEFAULT_PET_ID);
+            if (before) {
+              const newMood = Math.max(0, Math.min(100, (before.mood || 0) - 5));
+              db.updatePetState(DEFAULT_PET_ID, { mood: newMood });
+              const updated = db.addPetXp(DEFAULT_PET_ID, 0, 'overdue', null);
+              broadcastPetState(DEFAULT_PET_ID, updated, {
+                event: 'overdue',
+                dialogue: '逾期了：' + todo.title,
+                todoId: todo.id,
+              });
+            }
+          } catch (e) {
+            logError(`Overdue XP penalty failed: ${e && e.message ? e.message : e}`);
+          }
+        }
+      } catch (err) {
+        logError(`Overdue detection error: ${err.message}`);
+      }
+
+      // Repeat task reset: check completed repeating todos
+      try {
+        const allTodos = db.getTodos();
+        const now2 = new Date();
+        for (const todo of allTodos) {
           if (!todo.repeat_type || !todo.completed || !todo.last_completed_at) continue;
           // BUG-08: Use local time consistently — don't force UTC with +'Z' on last_completed_at.
           const lastCompleted = new Date(todo.last_completed_at);
@@ -1095,6 +1928,27 @@ if (!gotTheLock) {
       } catch (err) {
         logError(`Repeat task check error: ${err.message}`);
       }
+
+      // Mood decay: mood naturally drifts toward baseline (50) so the pet
+      // settles back to 'idle' within ~1-2 minutes after interactions.
+      // Rate: 4 pts/min; accelerated to 6 pts/min when in happy/celebrate
+      // zone (mood ≥ 90) to prevent prolonged excitement.
+      // Energy decay removed — it had no recovery path and caused permanent sleep.
+      try {
+        const MOOD_BASELINE = 50;
+        const DECAY_NORMAL = 4;
+        const DECAY_FAST   = 6;   // when mood ≥ 90
+        const allPets = db.getAllPetStates ? db.getAllPetStates() : [db.getPetState(DEFAULT_PET_ID)];
+        for (const pet of allPets) {
+          if (!pet || !pet.pet_id) continue;
+          if (typeof pet.mood === 'number' && pet.mood > MOOD_BASELINE) {
+            const rate = pet.mood >= 90 ? DECAY_FAST : DECAY_NORMAL;
+            db.updatePetState(pet.pet_id, { mood: Math.max(MOOD_BASELINE, pet.mood - rate) });
+            const updated = db.getPetState(pet.pet_id);
+            broadcastPetState(pet.pet_id, updated, { event: 'moodDecay' });
+          }
+        }
+      } catch (e) { /* best-effort */ }
     }, 60 * 1000);
 
     // Auto-backup interval (every 4 hours)
@@ -1127,6 +1981,15 @@ if (!gotTheLock) {
 
   app.on('will-quit', () => {
     try { globalShortcut.unregisterAll(); } catch (_) { /* noop */ }
+    try { closeAllPetWindows(); } catch (_) { /* noop */ }
+    // B2 fix: flush pending debounced writes before closing DB so pet
+    // positions saved in close handlers are not lost.
+    try { db.saveNow(); } catch (_) { /* noop */ }
+    try {
+      for (const t of chaseIntervals.values()) clearInterval(t);
+      chaseIntervals.clear();
+      chasingPets.clear();
+    } catch (_) { /* noop */ }
     try { db.close(); } catch (_) { /* noop */ }
   });
 }
@@ -1142,5 +2005,18 @@ module.exports = {
     getFloatingNoteIds,
     toggleSidebar,
     createTrayIconBuffer,
+    openPetWindow,
+    closePetWindow,
+    closeAllPetWindows,
+    // Stage 5+6
+    startMouseChase,
+    stopMouseChase,
+    createPet,
+    listAllPets,
+    breedPets,
+    morphPet,
+    climbOwnWindows,
+    currentTheme,
+    broadcastTheme,
   },
 };
