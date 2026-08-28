@@ -131,6 +131,8 @@ function moodToExpression(mood) {
     var autoPick = true;     // when true, frameIndex auto-advances
     var frameEl = dom.frame;
     var temporaryTimer = null;
+    var levelUpBubbleTimer = null;   // FIX Bug-5: tracked so destroy() can cancel
+    var levelUpRevertTimer = null;   // FIX Bug-5: tracked so destroy() can cancel
     var lastOutfit = 'none';
 
     function renderFrame() {
@@ -257,6 +259,10 @@ function moodToExpression(mood) {
       // and a sparkle ring overlay to the pet container; auto-cleans after
       // the CSS animation duration (matches the CSS keyframes ~2.4s/1.6s).
       showLevelUp: function (newLevel) {
+        // FIX Bug-5: cancel any prior level-up timers before starting new ones,
+        // so a rapid second level-up doesn't pile up stale callbacks.
+        if (levelUpBubbleTimer) { clearTimeout(levelUpBubbleTimer); levelUpBubbleTimer = null; }
+        if (levelUpRevertTimer) { clearTimeout(levelUpRevertTimer); levelUpRevertTimer = null; }
         // Bubble
         var bubble = document.createElement('div');
         bubble.className = 'pet-level-up-bubble';
@@ -269,12 +275,14 @@ function moodToExpression(mood) {
         // Celebrate expression while the bubble shows.
         applyExpression('celebrate');
         // Clean up after CSS animations end (2.4s bubble + 0.4s buffer).
-        setTimeout(function () {
+        levelUpBubbleTimer = setTimeout(function () {
+          levelUpBubbleTimer = null;
           if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
           if (ring.parentNode) ring.parentNode.removeChild(ring);
         }, 2500);
         // Revert expression after the celebration period (1.5s).
-        setTimeout(function () {
+        levelUpRevertTimer = setTimeout(function () {
+          levelUpRevertTimer = null;
           if (temporaryTimer) { clearTimeout(temporaryTimer); temporaryTimer = null; }
           if (baseExpression && baseExpression !== expression) {
             applyExpression(baseExpression);
@@ -288,6 +296,11 @@ function moodToExpression(mood) {
         running = false;
         if (rafId) cancelAnimationFrame(rafId);
         if (temporaryTimer) { clearTimeout(temporaryTimer); temporaryTimer = null; }
+        // FIX Bug-5: also cancel level-up timers — without this, a destroy()
+        // followed by an immediate initPetWithPack() left dangling callbacks
+        // that touched a removed DOM node (TypeError on frameEl.parentNode).
+        if (levelUpBubbleTimer) { clearTimeout(levelUpBubbleTimer); levelUpBubbleTimer = null; }
+        if (levelUpRevertTimer) { clearTimeout(levelUpRevertTimer); levelUpRevertTimer = null; }
         if (dom.root.parentNode) dom.root.parentNode.removeChild(dom.root);
       },
     };

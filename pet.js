@@ -346,6 +346,45 @@ function listCharacterPacks() {
     parseConfigXml(p.xml, path.join(IMG_DIR, p.id), p.id)
   );
 
+  // Built-in 3D packs (procedural characters, no GLB file needed).
+  // pet-renderer-3d.js generates characters from primitives when pack.model
+  // is null/absent. character_type selects the shape; color sets the main color.
+  // Users can add their own GLB by placing model.glb + config.json in ~/.stickytodo/img/<name>/.
+  var BUILTIN_3D = [
+    // ── 程序生成角色(无需 GLB 文件)──
+    { id: 'soldier-3d',  name: 'Soldier 3D',  emoji: '\ud83e\udd16', character_type: 'soldier', color: 'fef3c7' },
+    { id: 'cat-3d',      name: 'Cat 3D',      emoji: '\ud83d\udc31', character_type: 'cat',     color: 'f59e0b' },
+    { id: 'robot-3d',    name: 'Robot 3D',    emoji: '\ud83e\udd16', character_type: 'robot',   color: 'c0c0c0' },
+    { id: 'penguin-3d',  name: 'Penguin 3D',  emoji: '\ud83d\udc27', character_type: 'penguin' },
+    { id: 'ghost-3d',    name: 'Ghost 3D',    emoji: '\ud83d\udc7b', character_type: 'ghost',   color: 'f3f4f6' },
+    // ── 真实 GLB 模型(从 Three.js 官方仓库下载,CC0)──
+    { id: 'soldier-glb',  name: 'Soldier',     emoji: '\ud83d\udee1', model: 'Soldier.glb',  animations: { idle:'Idle', walk:'Walk', happy:'Run', celebrate:'Run', busy:'Idle', anxious:'Walk', sleep:'Idle' }, scale: 1.0 },
+    { id: 'xbot-glb',     name: 'Xbot',        emoji: '\ud83e\udd16', model: 'Xbot.glb',     animations: { idle:'idle', walk:'walk', happy:'agree', celebrate:'agree', busy:'sneak_pose', anxious:'headShake', sleep:'sad_pose' }, scale: 1.0 },
+    { id: 'michelle-glb', name: 'Michelle',    emoji: '\ud83d\udc83', model: 'Michelle.glb', animations: { idle:'SambaDance', walk:'SambaDance', happy:'SambaDance', celebrate:'SambaDance', busy:'SambaDance', anxious:'SambaDance', sleep:'SambaDance' }, scale: 1.2 },
+    { id: 'flamingo-glb', name: 'Flamingo',    emoji: '\ud83e\udda9', model: 'Flamingo.glb', animations: { idle:'flamingo_flyA_', walk:'flamingo_flyA_', happy:'flamingo_flyA_', celebrate:'flamingo_flyA_', busy:'flamingo_flyA_', anxious:'flamingo_flyA_', sleep:'flamingo_flyA_' }, scale: 0.012 },
+    { id: 'parrot-glb',   name: 'Parrot',      emoji: '\ud83e\udd9c', model: 'Parrot.glb',   animations: { idle:'parrot_A_', walk:'parrot_A_', happy:'parrot_A_', celebrate:'parrot_A_', busy:'parrot_A_', anxious:'parrot_A_', sleep:'parrot_A_' }, scale: 0.025 },
+    { id: 'stork-glb',    name: 'Stork',       emoji: '\ud83e\udd9d', model: 'Stork.glb',    animations: { idle:'storkFly_B_', walk:'storkFly_B_', happy:'storkFly_B_', celebrate:'storkFly_B_', busy:'storkFly_B_', anxious:'storkFly_B_', sleep:'storkFly_B_' }, scale: 0.012 },
+    { id: 'horse-glb',    name: 'Horse',       emoji: '\ud83d\udc34', model: 'Horse.glb',    animations: { idle:'horse_A_', walk:'horse_A_', happy:'horse_A_', celebrate:'horse_A_', busy:'horse_A_', anxious:'horse_A_', sleep:'horse_A_' }, scale: 0.006 },
+  ];
+  var ASSETS_DIR = path.join(__dirname, 'assets');
+  for (var i = 0; i < BUILTIN_3D.length; i++) {
+    var p3 = BUILTIN_3D[i];
+    result.push({
+      id: p3.id,
+      name: p3.name,
+      emoji: p3.emoji,
+      render_mode: '3d',
+      model: p3.model || null,                  // null = procedural, 'file.glb' = load GLB
+      character_type: p3.character_type || null,  // for procedural only
+      color: p3.color || null,
+      scale: p3.scale || 1.0,
+      animations: p3.animations || {},
+      sounds: {},
+      basePath: p3.model ? ASSETS_DIR : IMG_DIR,  // GLB packs → assets/, procedural → img/
+      packDir: p3.id,
+    });
+  }
+
   let entries = [];
   try {
     if (fs.existsSync(IMG_DIR)) {
@@ -359,6 +398,33 @@ function listCharacterPacks() {
 
   for (const name of entries) {
     const dir = path.join(IMG_DIR, name);
+
+    // 3D pack: config.json + model.glb
+    const cfgJson = path.join(dir, 'config.json');
+    const modelFile = path.join(dir, 'model.glb');
+    if (fs.existsSync(cfgJson) && fs.existsSync(modelFile)) {
+      try {
+        const json = JSON.parse(fs.readFileSync(cfgJson, 'utf-8'));
+        const parsed = {
+          id: name,
+          name: json.name || name,
+          emoji: json.emoji || '\ud83d\udc31',
+          render_mode: '3d',
+          model: json.model || 'model.glb',
+          scale: json.scale || 1.0,
+          animations: json.animations || {},
+          sounds: {},
+          basePath: dir,
+          packDir: name,
+        };
+        const idx = result.findIndex((p) => p.id === name);
+        if (idx >= 0) result[idx] = parsed;
+        else result.push(parsed);
+      } catch (_) { /* ignore unreadable 3D pack */ }
+      continue; // 3D pack processed; skip 2D xml check
+    }
+
+    // 2D pack: config.xml
     const cfg = path.join(dir, 'config.xml');
     if (!fs.existsSync(cfg)) continue; // skip dirs without config
     try {

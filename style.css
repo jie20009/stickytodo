@@ -2387,6 +2387,13 @@ body {
   flex-direction: column;
   gap: var(--space-1);
 }
+/* 2-column grid variant — used by Tab Visibility (7 checkboxes).
+   Override the default vertical flex with a grid layout. */
+.settings-checkbox-group.settings-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 16px;
+}
 .settings-checkbox {
   display: flex;
   align-items: center;
@@ -2403,6 +2410,184 @@ body {
 .settings-radio input[type="radio"] {
   accent-color: var(--accent);
 }
+
+/* ── Generic row / label / select / hint (used across all settings sections) ── */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-height: 28px;
+  padding: var(--space-1) 0;
+}
+.settings-select {
+  /* Don't stretch — let the select size to its content (longest option).
+     Previous `flex: 1 1 140px` made short selects (Language/Grouping) fill
+     the whole row, looking oversized in the 360px settings modal. */
+  flex: 0 0 auto;
+  min-width: 100px;
+  max-width: 200px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.settings-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.settings-label {
+  flex: 0 0 auto;
+  min-width: 80px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.settings-hint {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  padding-left: 4px;
+}
+.settings-row-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.settings-subsection {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--border-color);
+}
+.settings-section-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+/* ── Buttons ── */
+.btn-small {
+  padding: 2px 8px;
+  font-size: 11px;
+  min-height: auto;
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+.btn-danger {
+  color: var(--danger);
+}
+.btn-block {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+/* ── Collapsible details blocks (Backup list, Statistics, etc.) ── */
+.settings-collapsible {
+  margin-top: var(--space-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+.settings-collapsible > summary {
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.settings-collapsible > summary::-webkit-details-marker { display: none; }
+.settings-collapsible > summary::before {
+  content: '▸';
+  margin-right: var(--space-2);
+  transition: transform 0.15s ease;
+  color: var(--text-tertiary);
+}
+.settings-collapsible[open] > summary::before {
+  transform: rotate(90deg);
+}
+.settings-collapsible > summary:hover { color: var(--text-primary); }
+.settings-collapsible[open] > summary {
+  border-bottom: 1px solid var(--border-color);
+}
+.settings-collapsible[open] > *:not(summary) {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* ── Pet stats 进度条卡片（CSS 此前只在 patch notes 里，style.css 漏了——补上）── */
+.pet-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+.pet-stat-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 64px;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+.pet-stat-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.pet-stat-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-align: right;
+}
+.pet-stat-bar {
+  height: 6px;
+  background: var(--bg-active);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pet-stat-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+/* Pet multi-instance list */
+.pet-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+.pet-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+.pet-list-id { color: var(--text-secondary); font-family: monospace; }
+.pet-list-char { flex: 1; }
+.pet-list-lv, .pet-list-intimacy { color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.pet-list-tag { font-size: 10px; color: var(--text-tertiary); line-height: 1; flex-shrink: 0; }
+.pet-list-tag--open { color: var(--accent); font-size: 8px; }
 
 .shortcut-row {
   display: flex;

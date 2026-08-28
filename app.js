@@ -133,6 +133,7 @@ const I18N = {
     petIdle: '空闲', petPetLabel: '桌宠', petNoPets: '暂无桌宠', petBreeding: '正在繁殖…',
     petBreedSuccess: '繁殖成功！', petBreedFailed: '繁殖失败：{0}',
     petPetId: 'ID', petCharacterLabel: '角色', petFollowSystemThemeHint: '开启后桌宠配色会跟随系统外观变化',
+    pet3D: '3D 桌宠', pet3DHint: '启用 3D 渲染（需要 OpenGL 支持）',
 
   },
   en: {
@@ -208,6 +209,7 @@ const I18N = {
     petIdle: 'Idle', petPetLabel: 'Pet', petNoPets: 'No pets yet', petBreeding: 'Breeding…',
     petBreedSuccess: 'Breeding succeeded!', petBreedFailed: 'Breeding failed: {0}',
     petPetId: 'ID', petCharacterLabel: 'Character', petFollowSystemThemeHint: 'When enabled, the pet adapts to the system color scheme',
+    pet3D: '3D Pet', pet3DHint: 'Enable 3D rendering (requires OpenGL support)',
 
   },
   vi: {
@@ -283,6 +285,7 @@ const I18N = {
     petIdle: 'Rảnh', petPetLabel: 'Thú cưng', petNoPets: 'Chưa có thú cưng', petBreeding: 'Đang lai ghép…',
     petBreedSuccess: 'Lai ghép thành công!', petBreedFailed: 'Lai ghép thất bại: {0}',
     petPetId: 'ID', petCharacterLabel: 'Nhân vật', petFollowSystemThemeHint: 'Bật để thú cưng thích ứng với giao diện hệ thống',
+    pet3D: 'Thú cưng 3D', pet3DHint: 'Bật 3D (cần hỗ trợ OpenGL)',
 
   }
 };
@@ -3851,11 +3854,11 @@ const App = {
             <!-- Language -->
             <div class="settings-section">
               <div class="settings-section-title">{{ t('language') }}</div>
-              <div class="settings-radio-group">
-                <label class="settings-radio"><input type="radio" value="zh" v-model="locale" @change="setLocale(locale)" /> 中文</label>
-                <label class="settings-radio"><input type="radio" value="en" v-model="locale" @change="setLocale(locale)" /> English</label>
-                <label class="settings-radio"><input type="radio" value="vi" v-model="locale" @change="setLocale(locale)" /> Tiếng Việt</label>
-              </div>
+              <select class="settings-select" v-model="locale" @change="setLocale(locale)">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+                <option value="vi">Tiếng Việt</option>
+              </select>
             </div>
             <!-- Shortcut -->
             <div class="settings-section">
@@ -3873,20 +3876,20 @@ const App = {
             <!-- Grouping -->
             <div class="settings-section">
               <div class="settings-section-title">{{ t('grouping') }}</div>
-              <div class="settings-radio-group">
-                <label class="settings-radio"><input type="radio" value="date" v-model="groupingMode" @change="onGroupingChange" /> {{ t('groupByDate') }}</label>
-                <label class="settings-radio"><input type="radio" value="alpha" v-model="groupingMode" @change="onGroupingChange" /> {{ t('groupByAlpha') }}</label>
-                <label class="settings-radio"><input type="radio" value="none" v-model="groupingMode" @change="onGroupingChange" /> {{ t('groupByNone') }}</label>
-              </div>
+              <select class="settings-select" v-model="groupingMode" @change="onGroupingChange">
+                <option value="date">{{ t('groupByDate') }}</option>
+                <option value="alpha">{{ t('groupByAlpha') }}</option>
+                <option value="none">{{ t('groupByNone') }}</option>
+              </select>
             </div>
             <!-- Color Scheme -->
             <div class="settings-section">
               <div class="settings-section-title">{{ t('colorScheme') }}</div>
-              <div class="settings-radio-group">
-                <label class="settings-radio"><input type="radio" value="default" v-model="colorScheme" @change="setColorScheme('default')" /> {{ t('schemeDefault') }}</label>
-                <label class="settings-radio"><input type="radio" value="windows" v-model="colorScheme" @change="setColorScheme('windows')" /> {{ t('schemeWindows') }}</label>
-                <label class="settings-radio"><input type="radio" value="morandi" v-model="colorScheme" @change="setColorScheme('morandi')" /> {{ t('schemeMorandi') }}</label>
-              </div>
+              <select class="settings-select" v-model="colorScheme" @change="setColorScheme(colorScheme)">
+                <option value="default">{{ t('schemeDefault') }}</option>
+                <option value="windows">{{ t('schemeWindows') }}</option>
+                <option value="morandi">{{ t('schemeMorandi') }}</option>
+              </select>
             </div>
             <!-- Pet (StickyTodo Desktop Pet, Stage 1+2 + Stage 5+6) -->
             <div class="settings-section">
@@ -3920,12 +3923,21 @@ const App = {
                 </label>
                 <span class="settings-hint">{{ t('petFollowSystemThemeHint') }}</span>
               </div>
+              <!-- 3D Pet toggle -->
               <div class="settings-row">
-                <button class="btn btn-secondary" @click="resetPet" style="color:var(--danger)">{{ t('petReset') }}</button>
+                <label class="settings-checkbox">
+                  <input type="checkbox" v-model="pet3DEnabled" @change="onPet3DChange" />
+                  {{ t('pet3D') }}
+                </label>
+                <span class="settings-hint">{{ t('pet3DHint') }}</span>
+              </div>
+              <div class="settings-row">
+                <button class="btn btn-secondary btn-danger" @click="resetPet">{{ t('petReset') }}</button>
               </div>
               <div v-if="petState" class="pet-stats">
                 <div class="pet-stat-row">
                   <span class="pet-stat-label">{{ t('petLevel') }}</span>
+                  <div class="pet-stat-bar"></div>
                   <span class="pet-stat-value">Lv {{ petState.level || 1 }}</span>
                 </div>
                 <div class="pet-stat-row">
@@ -3945,13 +3957,17 @@ const App = {
                 </div>
                 <div class="pet-stat-row">
                   <span class="pet-stat-label">{{ t('petIntimacy') }}</span>
+                  <div class="pet-stat-bar"></div>
                   <span class="pet-stat-value">{{ petState.intimacy || 0 }}</span>
                 </div>
                 <div class="pet-stat-row">
                   <span class="pet-stat-label">{{ t('petStreak') }}</span>
+                  <div class="pet-stat-bar"></div>
                   <span class="pet-stat-value">{{ petState.daily_streak || 0 }}</span>
                 </div>
               </div>
+              <!-- FIX B8: petState 为 null 时（首次打开设置、异步加载中、或 DB 无宠物记录）占位 -->
+              <div v-else class="pet-stats-loading">{{ t('statsNoData') }}</div>
               <!-- Stage 5.2: Multi-pet list + create + breed -->
               <div class="settings-subsection">
                 <div class="settings-section-subtitle">{{ t('petMulti') }}</div>
@@ -3986,7 +4002,7 @@ const App = {
             <!-- Tab visibility -->
             <div class="settings-section">
               <div class="settings-section-title">{{ t('tabVisibility') }}</div>
-              <div class="settings-checkbox-group">
+              <div class="settings-checkbox-group settings-grid-2col">
                 <label class="settings-checkbox"><input type="checkbox" v-model="showTabAll" @change="saveTabVisibility" /> {{ t('tabAll') }}</label>
                 <label class="settings-checkbox"><input type="checkbox" v-model="showTabNotes" @change="saveTabVisibility" /> {{ t('tabNotes') }}</label>
                 <label class="settings-checkbox"><input type="checkbox" v-model="showTabTodos" @change="saveTabVisibility" /> {{ t('tabTodos') }}</label>
@@ -4000,19 +4016,22 @@ const App = {
             <div class="settings-section">
               <div class="settings-section-title">{{ t('backup') }}</div>
               <div class="backup-info">{{ t('backupAuto') }}</div>
-              <button class="btn btn-primary" @click="doManualBackup" style="margin-bottom:8px">{{ t('backupNow') }}</button>
-              <div v-if="backupList.length > 0" class="backup-list">
-                <div v-for="b in backupList" :key="b.name" class="backup-row">
-                  <div class="backup-row-info">
-                    <span class="backup-row-name">{{ b.name }}</span>
-                    <span class="backup-row-meta">{{ formatSize(b.size) }} · {{ formatDateStr(b.date) }}</span>
-                  </div>
-                  <div class="backup-row-actions">
-                    <button class="btn btn-secondary" @click="doRestoreBackup(b.path)">{{ t('backupRestore') }}</button>
-                    <button class="btn btn-secondary" style="color:var(--danger)" @click="doDeleteBackup(b.path, b.name)">{{ t('backupDelete') }}</button>
+              <button class="btn btn-primary btn-block" @click="doManualBackup">{{ t('backupNow') }}</button>
+              <details v-if="backupList.length > 0" class="settings-collapsible">
+                <summary>{{ t('backupList') }} ({{ backupList.length }})</summary>
+                <div class="backup-list">
+                  <div v-for="b in backupList" :key="b.name" class="backup-row">
+                    <div class="backup-row-info">
+                      <span class="backup-row-name">{{ b.name }}</span>
+                      <span class="backup-row-meta">{{ formatSize(b.size) }} · {{ formatDateStr(b.date) }}</span>
+                    </div>
+                    <div class="backup-row-actions">
+                      <button class="btn btn-secondary" @click="doRestoreBackup(b.path)">{{ t('backupRestore') }}</button>
+                      <button class="btn btn-secondary btn-danger" @click="doDeleteBackup(b.path, b.name)">{{ t('backupDelete') }}</button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </details>
               <div v-else class="backup-empty">{{ t('backupList') }}: —</div>
             </div>
             <!-- Import Data -->
@@ -4028,7 +4047,8 @@ const App = {
             <div class="settings-section stats-section">
               <div class="settings-section-title">{{ t('stats') }}</div>
               <div v-if="stats.totalTodos === 0" class="stats-empty">{{ t('statsNoData') }}</div>
-              <template v-else>
+              <details v-else class="settings-collapsible">
+                <summary>{{ t('statsThisWeek') }}: {{ stats.weekCompleted }}/{{ stats.weekTotal }} · {{ t('statsThisMonth') }}: {{ stats.monthCompleted }}/{{ stats.monthTotal }}</summary>
                 <div class="stat-row">
                   <span class="stat-label">{{ t('statsThisWeek') }}</span>
                   <span class="stat-value">{{ stats.weekCompleted }}/{{ stats.weekTotal }}</span>
@@ -4049,7 +4069,7 @@ const App = {
                     <div class="stat-chart-label">{{ d.label }}</div>
                   </div>
                 </div>
-              </template>
+              </details>
             </div>
           </div>
         </div>
@@ -4101,11 +4121,16 @@ const App = {
     const petPacks      = ref([]);
     const petCharacterId = ref('default');
     const petOutfit     = ref('none');
+    // FIX B2: remember the last 2D / 3D pack the user picked, so toggling the
+    // 3D switch preserves their selection instead of hardcoding soldier-3d/default.
+    const last2DChar = ref('default');
+    const last3DChar = ref('soldier-3d');
     // Stage 5+6
     const petList         = ref([]);     // result of pet:list
     const newPetPackId    = ref('default'); // pack selected for "new pet" button
-    const petFollowTheme  = ref(false);  // sidebar_state 'petFollowTheme'
-    const petTheme        = ref('dark'); // current OS theme, drives sidebar style
+const petFollowTheme  = ref(false);  // sidebar_state 'petFollowTheme'
+const petTheme        = ref('dark'); // current OS theme, drives sidebar style
+const pet3DEnabled    = ref(false);  // sidebar_state 'pet3DEnabled' — 3D render toggle
 
     // Tab visibility — all hidden by default for a clean UI; user enables in Settings.
     const showTabTimeline = ref(false);
@@ -4640,6 +4665,10 @@ const App = {
         try {
           const savedPetFollowTheme = await window.electronAPI.sidebar.getState('petFollowTheme');
           petFollowTheme.value = (savedPetFollowTheme === 'true' || savedPetFollowTheme === true);
+        } catch (_) { /* ignore */ }
+        try {
+          const savedPet3D = await window.electronAPI.sidebar.getState('pet3DEnabled');
+          pet3DEnabled.value = (savedPet3D === 'true' || savedPet3D === true);
         } catch (_) { /* ignore */ }
         try {
           const themeApi = window.electronAPI && window.electronAPI.theme;
@@ -5390,7 +5419,9 @@ const App = {
       showTodoAddMenu.value = false;
       showColorPicker.value = false;
       showTodoColorPicker.value = false;
-      contextMenu.value.visible = false;
+      // NOTE: `contextMenu` (AllView's local ref) is NOT accessible here —
+      // it auto-closes via @mouseleave + @click.stop on its own container.
+      // Only close the App-level context menu here.
       appContextMenu.value.visible = false;
     };
 
@@ -5471,7 +5502,12 @@ const App = {
       try {
         const packs = await window.electronAPI.pet.listPacks();
         if (Array.isArray(packs)) {
-          petPacks.value = packs.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji }));
+          petPacks.value = packs.map((p) => ({
+            id: p.id,
+            name: p.name,
+            emoji: p.emoji,
+            render_mode: p.render_mode || '2d'   // FIX B8: 保留 render_mode 给 is3DPack 查询
+          }));
         }
       } catch (e) { /* ignore */ }
     };
@@ -5535,13 +5571,10 @@ const App = {
       try {
         const api = window.electronAPI && window.electronAPI.pet;
         if (!api || !api.morph) return;
-        const target = (petPacks.value || []).find((p) => p && p.id !== getPetCurrentPackId(petId));
-        if (!target) {
-          // Fallback: cycle to default if user has only one pack.
-          await api.morph(petId, newPetPackId.value || 'default');
-        } else {
-          await api.morph(petId, target.id);
-        }
+        // FIX B7: use the pack the user picked in the "create pet" dropdown
+        // (newPetPackId) instead of blindly picking the first different pack.
+        const target = newPetPackId.value || 'default';
+        await api.morph(petId, target);
         await refreshPetList();
         await refreshPetState();
       } catch (e) { console.error('morphPetFromList failed:', e); }
@@ -5550,6 +5583,15 @@ const App = {
     const getPetCurrentPackId = (petId) => {
       const p = (petList.value || []).find((x) => x && x.pet_id === petId);
       return p ? p.character_id : 'default';
+    };
+
+    // FIX B2: detect whether a pack id is a 3D pack. Uses render_mode when the
+    // pack is known, otherwise falls back to the -3d / -glb naming convention.
+    const is3DPack = (packId) => {
+      if (!packId) return false;
+      const p = (petPacks.value || []).find((x) => x && x.id === packId);
+      if (p) return p.render_mode === '3d';
+      return /-(3d|glb)$/.test(packId);
     };
 
     // Stage 5.2: breedable pairs (both pets intimacy >= 300, distinct ids).
@@ -5601,6 +5643,27 @@ const App = {
           if (r && r.theme) petTheme.value = r.theme;
         }
       } catch (_) {}
+    };
+
+    // 3D Pet toggle: switch character_id to 3D pack ('soldier-3d') or back to 'default'.
+    // pet-window.js detects character_id change via pet:changed broadcast and
+    // reloads the pack with the correct renderer (2D or 3D).
+    const onPet3DChange = async () => {
+      try {
+        await window.electronAPI.sidebar.setState('pet3DEnabled', pet3DEnabled.value ? 'true' : 'false');
+      } catch (e) { console.error('Failed to save pet3DEnabled:', e); }
+      if (pet3DEnabled.value) {
+        // Enable 3D: remember the current 2D pack the user had, then switch to
+        // the last 3D pack they used (default: soldier-3d).
+        if (!is3DPack(petCharacterId.value)) last2DChar.value = petCharacterId.value;
+        petCharacterId.value = last3DChar.value;
+        try { await window.electronAPI.pet.setState('default', { character_id: last3DChar.value }); } catch (_) {}
+      } else {
+        // Disable 3D: remember the current 3D pack, switch back to the last 2D.
+        if (is3DPack(petCharacterId.value)) last3DChar.value = petCharacterId.value;
+        petCharacterId.value = last2DChar.value;
+        try { await window.electronAPI.pet.setState('default', { character_id: last2DChar.value }); } catch (_) {}
+      }
     };
 
     // Stage 6.2: when the OS theme flips, mirror it into petTheme.
@@ -6069,6 +6132,8 @@ const App = {
     newPetPackId,
     petFollowTheme,
     petTheme,
+    pet3DEnabled,
+    onPet3DChange,
     refreshPetList,
     petPackLabel,
     shortPetId,

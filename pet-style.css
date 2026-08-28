@@ -1,165 +1,57 @@
-/**
- * pet-style.css - Styles for StickyTodo Desktop Pet window
- *
- * The pet window is a 64x64 transparent BrowserWindow with
- *   -webkit-app-region: no-drag (we handle dragging ourselves for throw physics).
- *
- * Stage 1+2 covers: frame display + drag state + idle animations.
- * Stage 3+ will add level-up bubbles and dialog.
- */
-
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  /* overflow hidden to prevent any visual overflow that causes the
-     "bottom+right frame flicker" on Windows transparent windows. */
-  overflow: hidden;
-  -webkit-user-select: none;
-  user-select: none;
-  cursor: grab;
-  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, sans-serif;
-}
-
-/* Hide any Chromium resize handle / corner gripper that appears on
-   transparent frameless windows on Windows (causes bottom+right flicker). */
-body::-webkit-resizer,
-#pet-container::-webkit-resizer,
-.pet::-webkit-resizer,
-.pet-frame::-webkit-resizer {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-body.is-dragging {
-  cursor: grabbing;
-}
-
-/* The pet container holds the <div class="pet"> which the renderer creates. */
-#pet-container {
-  width: 64px;
-  height: 64px;
-  position: relative;
-  margin: 0 auto;   /* center horizontally when window is expanded */
-}
-
-/* The actual pet — emoji or image. */
-.pet {
-  position: absolute;
-  inset: 0;
+/** * pet-style.css - Styles for StickyTodo Desktop Pet window * * The pet window is a 64x64 transparent BrowserWindow with *   -webkit-app-region: no-drag (we handle dragging ourselves for throw physics). * * Stage 1+2 covers: frame display + drag state + idle animations. * Stage 3+ will add level-up bubbles and dialog. */html, body {  margin: 0;  padding: 0;  width: 100%;  height: 100%;  background: transparent;    /* overflow hidden — window is now 128×128 so emoji fits without overflow.
+     visible caused visual border when window expanded for dialogue/drag. */
+  overflow: hidden;  -webkit-user-select: none;  user-select: none;  cursor: grab;  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', system-ui, sans-serif;}/* Hide any Chromium resize handle / corner gripper that appears on   transparent frameless windows on Windows (causes bottom+right flicker). */body::-webkit-resizer,#pet-container::-webkit-resizer,.pet::-webkit-resizer,.pet-frame::-webkit-resizer {  display: none !important;  width: 0 !important;  height: 0 !important;}body.is-dragging {  cursor: grabbing;}/* The pet container holds the <div class="pet"> which the renderer creates. */#pet-container {
+  width: 128px;
+  height: 128px;  position: relative;  margin: 0 auto;   /* center horizontally when window is expanded */}/* FIX window-too-small: 3D 模�???128?128 容器给模?�更多显示空?��?   initPetWithPack �?container ??'pet-container-3d' class ?�换尺寸??*/#pet-container.pet-container-3d {  width: 128px;  height: 128px;}/* The actual pet ??emoji or image. */.pet {  position: absolute;  inset: 0;  display: flex;  align-items: center;  justify-content: center;  /* No transition on transform ??it causes flicker during drag/throw state changes */  will-change: auto;}.pet-frame {
+  width: 128px;
+  height: 128px;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* No transition on transform — it causes flicker during drag/throw state changes */
-  will-change: auto;
-}
-
-.pet-frame {
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48px;
+  font-size: 64px;
   line-height: 1;
-  pointer-events: auto;   /* receive clicks even though body is pointer-events:none */
+  transform: translateY(-16px);
+  pointer-events: auto;
   -webkit-user-drag: none;
   cursor: grab;
 }
-
 .pet-frame--img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   image-rendering: pixelated; /* preserve crisp pixel-art frames */
 }
-
-/* --- Idle "breathing" bob --------------------------------------------------- */
-.pet--expr-idle .pet-frame,
-.pet--expr-happy .pet-frame,
-.pet--expr-busy .pet-frame {
-  animation: pet-bob 3s ease-in-out infinite;
+/* --- Idle "breathing" bob --------------------------------------------------- */.pet--expr-idle .pet-frame,.pet--expr-happy .pet-frame,.pet--expr-busy .pet-frame {  animation: pet-bob 3s ease-in-out infinite;}@keyframes pet-bob {
+  0%, 100% { transform: translateY(-16px)  scale(1); }
+  50%      { transform: translateY(-19px) scale(1.02); }
 }
-
-@keyframes pet-bob {
-  0%, 100% { transform: translateY(0)  scale(1); }
-  50%      { transform: translateY(-3px) scale(1.02); }
+/* --- Happy bounce ??gentle sway, not frantic ---- */.pet--expr-happy .pet-frame {  animation: pet-happy-bounce 1.8s ease-in-out infinite;}@keyframes pet-happy-bounce {
+  0%, 100% { transform: translateY(-16px)   rotate(0deg); }
+  25%      { transform: translateY(-18px) rotate(-2deg); }
+  50%      { transform: translateY(-16px)   rotate(0deg); }
+  75%      { transform: translateY(-18px) rotate(2deg); }
 }
-
-/* --- Happy bounce — gentle sway, not frantic ---- */
-.pet--expr-happy .pet-frame {
-  animation: pet-happy-bounce 1.8s ease-in-out infinite;
+/* --- Celebrate shake ??moderate tempo, not frantic ------------------------ */.pet--expr-celebrate .pet-frame {  animation: pet-celebrate 1.2s ease-in-out infinite;}@keyframes pet-celebrate {
+  0%   { transform: translateY(-16px) scale(1)    rotate(0deg); }
+  25%  { transform: translateY(-16px) scale(1.08) rotate(-4deg); }
+  50%  { transform: translateY(-16px) scale(0.98) rotate(0deg); }
+  75%  { transform: translateY(-16px) scale(1.05) rotate(4deg); }
+  100% { transform: translateY(-16px) scale(1)    rotate(0deg); }
 }
-
-@keyframes pet-happy-bounce {
-  0%, 100% { transform: translateY(0)    rotate(0deg); }
-  25%      { transform: translateY(-2px) rotate(-2deg); }
-  50%      { transform: translateY(0)    rotate(0deg); }
-  75%      { transform: translateY(-2px) rotate(2deg); }
+/* --- Sleep: slow gentle droop --------------------------------------------- */.pet--expr-sleep .pet-frame {  animation: pet-sleep 4s ease-in-out infinite;  filter: brightness(0.85);}@keyframes pet-sleep {
+  0%, 100% { transform: translateY(-16px)  rotate(0deg); }
+  50%      { transform: translateY(-14px) rotate(-2deg); }
 }
-
-/* --- Celebrate shake — moderate tempo, not frantic ------------------------ */
-.pet--expr-celebrate .pet-frame {
-  animation: pet-celebrate 1.2s ease-in-out infinite;
+/* --- Anxious wobble ------------------------------------------------------- */.pet--expr-anxious .pet-frame {  animation: pet-anxious 0.25s linear infinite;}@keyframes pet-anxious {
+  0%, 100% { transform: translateY(-16px) translateX(0); }
+  25%      { transform: translateY(-16px) translateX(-1px); }
+  75%      { transform: translateY(-16px) translateX(1px); }
 }
-
-@keyframes pet-celebrate {
-  0%   { transform: scale(1)    rotate(0deg); }
-  25%  { transform: scale(1.08) rotate(-4deg); }
-  50%  { transform: scale(0.98) rotate(0deg); }
-  75%  { transform: scale(1.05) rotate(4deg); }
-  100% { transform: scale(1)    rotate(0deg); }
+/* --- Busy: slight bob with no rotation ------------------------------------ */.pet--expr-busy .pet-frame {  animation: pet-busy 1.6s ease-in-out infinite;}@keyframes pet-busy {
+  0%, 100% { transform: translateY(-16px)  rotate(0deg); }
+  50%      { transform: translateY(-17px) rotate(0deg); }
 }
-
-/* --- Sleep: slow gentle droop --------------------------------------------- */
-.pet--expr-sleep .pet-frame {
-  animation: pet-sleep 4s ease-in-out infinite;
-  filter: brightness(0.85);
-}
-
-@keyframes pet-sleep {
-  0%, 100% { transform: translateY(0)   rotate(0deg); }
-  50%      { transform: translateY(2px) rotate(-2deg); }
-}
-
-/* --- Anxious wobble ------------------------------------------------------- */
-.pet--expr-anxious .pet-frame {
-  animation: pet-anxious 0.25s linear infinite;
-}
-
-@keyframes pet-anxious {
-  0%, 100% { transform: translateX(0); }
-  25%      { transform: translateX(-1px); }
-  75%      { transform: translateX(1px); }
-}
-
-/* --- Busy: slight bob with no rotation ------------------------------------ */
-.pet--expr-busy .pet-frame {
-  animation: pet-busy 1.6s ease-in-out infinite;
-}
-
-@keyframes pet-busy {
-  0%, 100% { transform: translateY(0)   rotate(0deg); }
-  50%      { transform: translateY(-1px) rotate(0deg); }
-}
-
-/* --- Drag state: stop animation + subtle drop shadow only (NO scale) ---- */
-.pet.pet--dragging .pet-frame {
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-  animation: none;
-}
-
-/* --- Throw state: slight tilt in direction of motion (set via inline JS) --- */
-.pet--throwing .pet-frame {
-  transition: transform 100ms linear;
-}
-
-/* --- Level-up bubble (Stage 3) -------------------------------------------- */
-/* Positioned below the pet; window expands when level-up shows. */
-.pet-level-up-bubble {
+/* --- Drag state: stop animation (no drop-shadow — it looked like a border) */.pet.pet--dragging .pet-frame {  animation: none;}/* --- Throw state: slight tilt in direction of motion (set via inline JS) --- */.pet--throwing .pet-frame {  transition: transform 100ms linear;}/* --- Level-up bubble (Stage 3) -------------------------------------------- *//* Positioned below the pet; window expands when level-up shows. */.pet-level-up-bubble {
   position: absolute;
   top: 100%;
   bottom: auto;
@@ -178,7 +70,6 @@ body.is-dragging {
   z-index: 10;
   text-shadow: 0 1px 0 rgba(255,255,255,0.5);
 }
-
 @keyframes pet-level-up {
   0%   { opacity: 0; transform: translate(-50%, 4px)   scale(0.5); }
   15%  { opacity: 1; transform: translate(-50%, 4px)   scale(1.1); }
@@ -186,9 +77,7 @@ body.is-dragging {
   70%  { opacity: 1; transform: translate(-50%, 4px)   scale(1.0); }
   100% { opacity: 0; transform: translate(-50%, 4px)   scale(0.8); }
 }
-
-/* Sparkle ring around the pet during level-up (Stage 3) */
-.pet-level-up-ring {
+/* Sparkle ring around the pet during level-up (Stage 3) */.pet-level-up-ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
@@ -197,15 +86,12 @@ body.is-dragging {
   animation: pet-level-up-ring 1.6s ease-out forwards;
   opacity: 0;
 }
-
 @keyframes pet-level-up-ring {
   0%   { opacity: 0; transform: scale(0.6); }
   20%  { opacity: 1; transform: scale(0.9); }
   100% { opacity: 0; transform: scale(2.0); }
 }
-
-/* --- Generic event bubble (kept for legacy callers) ------------------------ */
-.pet-bubble {
+/* --- Generic event bubble (kept for legacy callers) ------------------------ */.pet-bubble {
   position: absolute;
   top: 0;
   left: 50%;
@@ -219,23 +105,18 @@ body.is-dragging {
   pointer-events: none;
   animation: pet-bubble-rise 1.6s ease-out forwards;
 }
-
 @keyframes pet-bubble-rise {
   0%   { opacity: 0; transform: translate(-50%, 4px); }
   20%  { opacity: 1; transform: translate(-50%, -2px); }
   80%  { opacity: 1; transform: translate(-50%, -8px); }
   100% { opacity: 0; transform: translate(-50%, -14px); }
 }
-
-/* --- Dialogue bubble (Stage 4) --------------------------------------------- */
-/* Positioned below the pet. The window expands when dialogue shows so this
-   is visible; when no dialogue, window is 64×64 and this is clipped by overflow:hidden. */
-.pet-dialogue {
+/* --- Dialogue bubble (Stage 4) --------------------------------------------- *//* Positioned below the pet. The window expands when dialogue shows so this   is visible; when no dialogue, window is 64?64 and this is clipped by overflow:hidden. */.pet-dialogue {
   position: absolute;
-  top: 100%;
+  top: 60%;
   bottom: auto;
   left: 50%;
-  transform: translate(-50%, 4px);
+  transform: translate(-50%, 0px);
   background: #fff;
   color: #1f2937;
   padding: 3px 7px;
@@ -253,104 +134,37 @@ body.is-dragging {
   z-index: 9;
   animation: pet-dialogue-pop 3s ease-out forwards;
 }
-
-.pet-dialogue::after {
-  content: '';
-  position: absolute;
-  bottom: 100%;
-  top: auto;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-bottom-color: #fff;
-}
-
-@keyframes pet-dialogue-pop {
+.pet-dialogue::after {  content: '';  position: absolute;  bottom: 100%;  top: auto;  left: 50%;  transform: translateX(-50%);  border: 4px solid transparent;  border-bottom-color: #fff;}@keyframes pet-dialogue-pop {
   0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.85); }
-  10%  { opacity: 1; transform: translate(-50%, 4px) scale(1.0); }
-  85%  { opacity: 1; transform: translate(-50%, 4px) scale(1.0); }
-  100% { opacity: 0; transform: translate(-50%, 0) scale(0.95); }
+  10%  { opacity: 1; transform: translate(-50%, 0) scale(1.0); }
+  85%  { opacity: 1; transform: translate(-50%, 0) scale(1.0); }
+  100% { opacity: 0; transform: translate(-50%, -4px) scale(0.95); }
 }
-
-/* --- Outfit overlays (Stage 3) -------------------------------------------- */
-/* Each outfit is a ::before/::after overlay on .pet-container.
-   We use absolutely positioned pseudo-elements; the renderer adds
-   .outfit-<name> to the container and they render the emoji on the pet. */
-.pet-container {
+/* --- Outfit overlays (Stage 3) -------------------------------------------- *//* Each outfit is a ::before/::after overlay on .pet-container.   We use absolutely positioned pseudo-elements; the renderer adds   .outfit-<name> to the container and they render the emoji on the pet. */.pet-container {
   position: relative;
   width: 100%;
   height: 100%;
 }
-
-/* Common layout for outfit emojis: absolutely positioned over the pet. */
-.pet-container.outfit-hat::after,
-.pet-container.outfit-glasses::after,
-.pet-container.outfit-crown::before {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 22px;
-  line-height: 1;
-  pointer-events: none;
-  z-index: 5;
-  text-align: center;
-}
-
-.pet-container.outfit-hat::after {
-  content: '\01F3A9'; /* top hat */
-  top: 2px;
-}
-
-.pet-container.outfit-glasses::after {
-  content: '\01F453'; /* glasses */
-  top: 24px;
-  font-size: 20px;
-}
-
-.pet-container.outfit-crown::before {
-  content: '\01F451'; /* crown */
-  top: 0;
-}
-
-/* --- Theme follow (Stage 6.2) --------------------------------------------- */
-/* Default = dark theme. When the OS flips to light, pet-style.css adapts
-   the dialogue/level-up bubbles + the pet-container backdrop. The pet frame
-   itself (emoji/PNG) is theme-agnostic — it's the OS chrome around it that
-   changes color. */
-html[data-theme="light"],
+/* Common layout for outfit emojis: absolutely positioned over the pet. */.pet-container.outfit-hat::after,.pet-container.outfit-glasses::after,.pet-container.outfit-crown::before {  position: absolute;  left: 50%;  transform: translateX(-50%);  font-size: 22px;  line-height: 1;  pointer-events: none;  z-index: 5;  text-align: center;}.pet-container.outfit-hat::after {  content: '\01F3A9'; /* top hat */  top: 2px;}.pet-container.outfit-glasses::after {  content: '\01F453'; /* glasses */  top: 24px;  font-size: 20px;}.pet-container.outfit-crown::before {  content: '\01F451'; /* crown */  top: 0;}/* --- Theme follow (Stage 6.2) --------------------------------------------- *//* Default = dark theme. When the OS flips to light, pet-style.css adapts   the dialogue/level-up bubbles + the pet-container backdrop. The pet frame   itself (emoji/PNG) is theme-agnostic ??it's the OS chrome around it that   changes color. */html[data-theme="light"],
 html[data-theme="light"] body {
   background: transparent;
 }
-
-/* Light theme: white-with-shadow bubble + slightly brighter drop shadow. */
-html[data-theme="light"] .pet-dialogue {
+/* Light theme: white-with-shadow bubble + slightly brighter drop shadow. */html[data-theme="light"] .pet-dialogue {
   background: #ffffff;
   color: #1f2937;
   box-shadow: 0 2px 6px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.05);
 }
-
 html[data-theme="light"] .pet-dialogue::after {
   border-top-color: #ffffff;
 }
-
-/* Light theme: blue-tinted level-up bubble for better contrast on light bg. */
-html[data-theme="light"] .pet-level-up-bubble {
+/* Light theme: blue-tinted level-up bubble for better contrast on light bg. */html[data-theme="light"] .pet-level-up-bubble {
   background: linear-gradient(135deg, #fde68a 0%, #f59e0b 100%);
   color: #5b3503;
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.45);
 }
-
-/* Light theme: gentler drop shadow under the pet when dragging. */
-html[data-theme="light"] .pet.pet--dragging .pet-frame {
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.20));
+/* Light theme: no drop-shadow (looked like a border). */html[data-theme="light"] .pet.pet--dragging .pet-frame {
 }
-
-/* Climbing state (Stage 6.3): show a subtle 'hold on' animation overlay. */
-.pet--climbing .pet-frame {
-  animation: pet-climbing 0.8s ease-in-out infinite;
-}
-
-@keyframes pet-climbing {
-  0%, 100% { transform: translateY(0) rotate(-1deg); }
-  50%      { transform: translateY(-2px) rotate(1deg); }
+/* Climbing state (Stage 6.3): show a subtle 'hold on' animation overlay. */.pet--climbing .pet-frame {  animation: pet-climbing 0.8s ease-in-out infinite;}@keyframes pet-climbing {
+  0%, 100% { transform: translateY(-16px) rotate(-1deg); }
+  50%      { transform: translateY(-18px) rotate(1deg); }
 }

@@ -55,8 +55,10 @@ const FLOATING_TODO_H    = 400;
 const SIDEBAR_HTML       = 'index.html'; // single HTML for sidebar + floating notes
 const FLOATING_NOTE_HTML = 'index.html'; // floating windows reuse index.html; renderer detects noteId
 // ---- Pet window (StickyTodo Desktop Pet, Stage 1+2) ----
-const PET_W              = 64;
-const PET_H              = 64;
+const PET_W              = 128;  // FIX B16: match pet-window.js petSize=128 (was 64, caused startup window jump 64→128)
+const PET_H              = 128;
+                                 // dead code that briefly made the window 128×128 before
+                                 // the renderer's _resizeWindow(64,64) shrunnk it back).
 const PET_HTML           = 'pet.html';
 const PRELOAD_PATH       = path.join(__dirname, 'preload.js');
 let currentShortcut      = 'Super+Alt+S';
@@ -863,10 +865,16 @@ function climbOwnWindows(petId) {
     if (!win.isVisible() || win.isMinimized()) continue;
     let b;
     try { b = win.getBounds(); } catch (_) { continue; }
-    // Skip pet-style always-on-top transparent windows (they're decoration, not desktop furniture).
+    // FIX B9: skip pet-style always-on-top transparent windows (they're
+    // decoration, not desktop furniture to climb). Without this, in a
+    // multi-pet scenario pet A would find pet B's window as a target and
+    // climb onto it. The original condition was inverted — `(!alwaysOnTop
+    // || alwaysOnTop === false)` is the OPPOSITE of "always-on-top" —
+    // so the if-block never matched pet windows and the `continue` was
+    // missing entirely.
     const wOpts = win.getOptions ? win.getOptions() : null;
-    if (wOpts && wOpts.transparent && wOpts.skipTaskbar && (!wOpts.alwaysOnTop || wOpts.alwaysOnTop === false)) {
-      // ok, treat as a target
+    if (wOpts && wOpts.transparent && wOpts.skipTaskbar && wOpts.alwaysOnTop) {
+      continue;
     }
     // Compute distance from pet center to the window rectangle's nearest edge.
     const nearestX = Math.max(b.x, Math.min(petCenterX, b.x + b.width));
@@ -1604,10 +1612,16 @@ ipcMain.handle('pet:hide', safe(async (_evt, petId) => {
     const pet = require('./pet');
     return pet.listCharacterPacks().map(function (p) {
       // Strip non-serializable basePath (absolute path) — keep packDir only.
+      // Include 3D fields so pet-window.js can pick the right renderer.
       return {
         id: p.id,
         name: p.name,
         emoji: p.emoji,
+        render_mode: p.render_mode || '2d',
+        character_type: p.character_type || null,
+        color: p.color || null,
+        model: p.model || null,
+        scale: p.scale || 1.0,
         animations: p.animations,
         sounds: p.sounds || {},
         packDir: p.packDir,
@@ -1624,9 +1638,16 @@ ipcMain.handle('pet:hide', safe(async (_evt, petId) => {
       id: p.id,
       name: p.name,
       emoji: p.emoji,
+      render_mode: p.render_mode || '2d',
+      character_type: p.character_type || null,
+      color: p.color || null,
+      model: p.model || null,
+      scale: p.scale || 1.0,
       animations: p.animations,
       sounds: p.sounds || {},
       packDir: p.packDir,
+      // basePath is needed for GLB file:// URL resolution (3D GLB packs only)
+      basePath: p.basePath || null,
     };
   }));
 

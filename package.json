@@ -22,8 +22,8 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "sql.js": "^1.14.2",
+    "three": "^0.160.0",
     "vue": "^3.5.41"
   },
   "build": {
@@ -48,6 +48,9 @@
       "pet-renderer.js",
       "pet-window.js",
       "pet-style.css",
+      "three.min.js",
+      "GLTFLoader.js",
+      "pet-renderer-3d.js",
       "node_modules/**/*"
     ],
     "win": {

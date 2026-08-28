@@ -73,6 +73,9 @@
   // ---------------------------------------------------------------------------
   var PET_W = 64;
   var PET_H = 64;
+  // FIX window-too-small: 3D 和 2D 模式都用 128×128 窗口给桌宠更多显示空间。
+  // 之前 2D 用 64×64 导致 emoji 腿脚被裁 + 窗口太小看不清。
+  var petSize = 128;
 
   var drag = {
     active: false,
@@ -93,8 +96,12 @@
   // pet:changed events whose event is 'chasing' or 'chaseStop'). Used by
   // the right-click menu to show a checked toggle.
   var isChasing = false;
-  var currentPack = null;        // Stage 5.3: morph needs to know current pack
-  var currentTheme = 'dark';     // Stage 6.2: data-theme applied to container
+var currentPack = null;        // Stage 5.3: morph needs to know current pack
+var currentPackId = 'default'; // Track character_id for 2D↔3D switch detection
+var pendingPackId = null;      // FIX Bug-1: packId claimed by an in-flight load —
+//                              both onChanged and onMorph handlers check this to
+//                              deduplicate when IPC arrives in either order.
+var currentTheme = 'dark';     // Stage 6.2: data-theme applied to container
 
   var throwState = {
     active: false,
@@ -126,10 +133,10 @@
       // At least one source needs expanded window — use the larger width.
       var w = resizeState._dialogueW || 140;
       if (resizeState.levelUp && !resizeState.dialogue) w = 140;
-      var h = 64 + 50;
+      var h = petSize + 50;
       if (api.pet && api.pet._resizeWindow) api.pet._resizeWindow(w, h);
     } else {
-      if (api.pet && api.pet._resizeWindow) api.pet._resizeWindow(64, 64);
+      if (api.pet && api.pet._resizeWindow) api.pet._resizeWindow(petSize, petSize);
     }
   }
 
@@ -264,8 +271,9 @@
     // HIGH-6 fix: clamp to screen bounds so pet can't be dragged offscreen.
     var newX = drag.startWinX + dx;
     var newY = drag.startWinY + dy;
-    newX = Math.max(0, Math.min(screenW - PET_W, newX));
-    newY = Math.max(workY, Math.min(screenH - PET_H, newY));
+    // FIX window-too-small: clamp by petSize (3D 模式 = 128, 2D = 64)
+    newX = Math.max(0, Math.min(screenW - petSize, newX));
+    newY = Math.max(workY, Math.min(screenH - petSize, newY));
     // Use rAF-throttled IPC move (replaces window.moveTo + _moveWindow double-call).
     // _moveWindow enforces 64×64 size on main process side (anti DPI-resize).
     moveWindowRAF(newX, newY);
@@ -436,9 +444,9 @@
 
     // Clamp to work area + bounce off walls.
     var minX = 0;
-    var maxX = Math.max(0, screenW - PET_W);
+    var maxX = Math.max(0, screenW - petSize);
     var minY = workY;
-    var maxY = Math.max(workY, screenH - PET_H);
+    var maxY = Math.max(workY, screenH - petSize);
 
     if (x < minX) {
       x = minX;
@@ -510,11 +518,11 @@
     // Force reflow so re-adding restarts the animation.
     void dialogueEl.offsetWidth;
     dialogueEl.classList.add('pet-dialogue');
-    // Expand the pet window so the bubble (positioned below the 64×64 pet)
+    // Expand the pet window so the bubble (positioned below the pet)
     // is visible. Measure actual rendered width via scrollWidth for accuracy.
     var bubbleW = Math.min(220, Math.max(80, dialogueEl.scrollWidth + 16));
-    var winW = Math.max(64, bubbleW + 8);
-    var winH = 64 + 50; // pet height + bubble area
+    var winW = Math.max(petSize, bubbleW + 8);
+    var winH = petSize + 50; // pet height + bubble area (FIX: was hardcoded 64)
     resizeState.dialogue = true;
     resizeState._dialogueW = winW;
     if (api.pet && api.pet._resizeWindow) api.pet._resizeWindow(winW, winH);
@@ -695,13 +703,20 @@
       if (key !== lastEventKey || (nowMs - lastEventAppliedAt) > 250) {
         lastEventKey = key;
         lastEventAppliedAt = nowMs;
-        applyEventExpression(opts.event);
+        // FIX Bug-4: pass full opts so overdue/todoDue branches can read opts.dialogue
+        applyEventExpression(opts.event, opts);
       }
     }
   }
 
   // Map XP/interaction events to a temporary expression (Stage 4).
-  function applyEventExpression(eventName) {
+  // `opts` is the second arg from applyStateToPet — carries payload.dialogue
+  // (main-process-supplied reminder text for overdue / todoDue events).
+  // FIX Bug-4: previously referenced `opts` without it being in scope,
+  // causing `ReferenceError: opts is not defined` and silently breaking
+  // the overdue / due-soon dialogue bubbles.
+  function applyEventExpression(eventName, opts) {
+    opts = opts || {};
     if (!eventName) return;
     // Stage 5.1: chase mouse — switch to walk expression (no auto-revert).
     if (eventName === 'chasing') {
@@ -808,7 +823,37 @@
       pet = null;
     }
     currentPack = pack;
-    pet = window.PetRenderer.createPetRenderer(pack, container);
+    // Sync currentPackId so the onChanged handler can detect whether a
+    // pet:changed event's character_id is already loaded (prevents a redundant
+    // double-reload when both pet:changed and pet:morph fire for the same switch).
+    if (pack && pack.id) currentPackId = pack.id;
+    // FIX Bug-8: clear any stale window-resize state from the OLD renderer.
+    // The old renderer's dialogue bubble / level-up ring are gone after
+    // destroy(), but resizeState.dialogue / levelUp persisted in module
+    // scope, keeping the pet window inflated. Shrink back to 64×64 BEFORE
+    // applying the new state, so a subsequent level-up re-inflation starts
+    // from a clean baseline.
+    resizeState.dialogue = false;
+    resizeState.levelUp = false;
+    resizeState._dialogueW = null;
+    updateWindowSize();
+    // 3D mode: use PetRenderer3D if pack is 3D and Three.js is loaded.
+    // 2D mode: use PetRenderer (emoji/PNG frames).
+    var is3D = (pack.render_mode === '3d' && window.PetRenderer3D && window.THREE);
+    // FIX window-too-small: 3D 和 2D 都用 128×128 窗口。
+    petSize = 128;
+    // 3D 模式给 container 加 'pet-container-3d' class（CSS 控制尺寸）。
+    if (container) {
+      if (is3D) container.classList.add('pet-container-3d');
+      else container.classList.remove('pet-container-3d');
+    }
+    // Resize window to match new petSize.
+    updateWindowSize();
+    if (is3D) {
+      pet = window.PetRenderer3D.createPetRenderer(pack, container);
+    } else {
+      pet = window.PetRenderer.createPetRenderer(pack, container);
+    }
     // The old .pet-frame DOM element was destroyed by pet.destroy() above.
     // Reset the cached reference so the next hit-test re-queries the DOM
     // (updateHitTest lazily re-fetches petFrameEl when it's null).
@@ -860,6 +905,13 @@
         hitTestRAF = false;
         var ev = lastHitEvent;
         if (!ev) return;
+        // Phase 2: 3D hit-test — if pet has a hitTest method (3D renderer),
+        // use Raycaster-based picking instead of 2D bounding rect.
+        if (pet && typeof pet.hitTest === 'function') {
+          setHit(pet.hitTest(ev.clientX, ev.clientY));
+          return;
+        }
+        // 2D hit-test (original path)
         if (!petFrameEl) petFrameEl = document.querySelector('.pet-frame');
         if (!petFrameEl) return;
         // Cache rect briefly (~200ms) to avoid reflow on every frame, but
@@ -913,7 +965,30 @@
         var state = payload.state;
         if (state && typeof state === 'object') {
           lastState = state;
-          applyStateToPet(state, { event: payload.event, dialogue: payload.dialogue, todoId: payload.todoId });
+          // Detect character_id change → reload pack (2D↔3D switch).
+          // FIX Bug-1: also skip if a load is already in-flight (pendingPackId).
+          // FIX Bug-2: do NOT call applyStateToPet synchronously here —
+          //   initPetWithPack calls it internally on the NEW renderer after
+          //   the async getPack resolves. Calling it now would target the
+          //   OLD renderer (about to be destroyed) and schedule setTimeouts
+          //   that fire on the NEW renderer (mismatched window resize).
+          var isCharacterSwitch = (
+            typeof state.character_id === 'string' &&
+            state.character_id !== currentPackId &&
+            state.character_id !== pendingPackId
+          );
+          if (isCharacterSwitch) {
+            pendingPackId = state.character_id;
+            currentPackId = state.character_id;
+            if (api.pet && api.pet.getPack) {
+              api.pet.getPack(state.character_id).then(function (pack) {
+                pendingPackId = null;  // load complete
+                if (pack) initPetWithPack(pack, state);
+              }).catch(function () { pendingPackId = null; });
+            }
+          } else {
+            applyStateToPet(state, { event: payload.event, dialogue: payload.dialogue, todoId: payload.todoId });
+          }
           if (typeof state.intimacy === 'number') lastIntimacy = state.intimacy;
         }
         // Stage 5.1: track chasing state for menu UI + walk sound loop.
@@ -936,14 +1011,22 @@
     if (api.pet && api.pet.onMorph) {
       api.pet.onMorph(function (payload) {
         if (!payload || !payload.packId) return;
+        // FIX Bug-1: skip if already loaded OR if a load for this packId
+        // was already claimed by the onChanged handler (handles both IPC
+        // orderings — onChanged-first and onMorph-first).
+        if (payload.packId === currentPackId || payload.packId === pendingPackId) return;
         if (!api.pet || !api.pet.getPack) return;
+        pendingPackId = payload.packId;
+        currentPackId = payload.packId;
         api.pet.getPack(payload.packId).then(function (pack) {
+          pendingPackId = null;  // load complete
           if (!pack) return;
           initPetWithPack(pack, lastState);
           // Tiny celebration cue so the user sees the change.
           try { playSound('click'); } catch (_) {}
           showDialogue('变身！', 'friendly');
         }).catch(function (err) {
+          pendingPackId = null;
           console.error('[pet-window] morph getPack failed', err);
         });
       });
