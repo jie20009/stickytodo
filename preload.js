@@ -148,6 +148,8 @@ const CHANNELS = {
   },
   note: {
     exportImage: 'note:exportImage',
+    exportMarkdown: 'note:exportMarkdown',
+    exportPDF: 'note:exportPDF',
   },
   trash: {
     list:    'trash:list',
@@ -310,6 +312,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   note: {
     exportImage: (noteData) => ipcRenderer.invoke(CHANNELS.note.exportImage, noteData),
+    exportMarkdown: (noteData) => ipcRenderer.invoke(CHANNELS.note.exportMarkdown, noteData),
+    exportPDF: (noteData) => ipcRenderer.invoke(CHANNELS.note.exportPDF, noteData),
   },
 
   trash: {

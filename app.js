@@ -83,7 +83,7 @@ const I18N = {
     groupToday: '今天', groupThisWeek: '本周', groupEarlier: '更早', groupAZ: 'A-Z', tomorrow: '明天',
     noteTitle: '便笺',
     filterAll: '全部', filterActive: '未完成', filterCompleted: '已完成',
-    searchPlaceholder: '搜索...', searchNoResults: '没有匹配的结果', clearSearch: '清除搜索',
+    searchPlaceholder: '搜索...', searchNoResults: '没有匹配的结果', clearSearch: '清除搜索', todoPending: '⬜ 待办', todoDone: '✅ 已完成',
     reminderSoon: '即将到期', reminderDismiss: '知道了', reminderDueOn: '到期时间',
     backup: '数据备份', backupNow: '立即备份', backupList: '备份列表', backupRestore: '恢复', backupDelete: '删除备份',
     backupConfirmRestore: '恢复会重启应用，确定？', backupConfirmDelete: '确定删除这个备份？',
@@ -113,7 +113,7 @@ const I18N = {
     encryptNote: '加密便笺', decryptNote: '解密便笺', enterPassword: '输入密码', encrypted: '加密内容', wrongPassword: '密码错误',
     versionHistory: '版本历史', restoreVersion: '恢复版本', noVersions: '暂无版本', versionCount: '版本数',
     focusMode: '专注模式', exitFocus: '退出专注',
-    shareImage: '分享为图片', imageSaved: '图片已保存',
+    shareImage: '分享为图片', imageSaved: '图片已保存', exportMD: '导出 Markdown', exportPDF: '导出 PDF', exportDone: '已导出到桌面',
     timelineEmpty: '暂无动态', tlNoteCreated: '便笺创建', tlNoteUpdated: '便笺更新', tlTodoCreated: '待办创建', tlTodoCompleted: '待办完成',
     importData: '导入数据', importSelect: '选择文件', importResult: '导入完成', importError: '导入失败',
     toggleTodo: '切换完成', undoDeleteFailed: '项目已永久删除，无法恢复',
@@ -159,7 +159,7 @@ const I18N = {
     groupToday: 'Today', groupThisWeek: 'This week', groupEarlier: 'Earlier', groupAZ: 'A-Z', tomorrow: 'Tomorrow',
     noteTitle: 'Note',
     filterAll: 'All', filterActive: 'Active', filterCompleted: 'Completed',
-    searchPlaceholder: 'Search...', searchNoResults: 'No results found', clearSearch: 'Clear search',
+    searchPlaceholder: 'Search...', searchNoResults: 'No results found', clearSearch: 'Clear search', todoPending: '⬜ Pending', todoDone: '✅ Done',
     reminderSoon: 'Due soon', reminderDismiss: 'Got it', reminderDueOn: 'Due on',
     backup: 'Backup', backupNow: 'Backup now', backupList: 'Backup list', backupRestore: 'Restore', backupDelete: 'Delete backup',
     backupConfirmRestore: 'This will restart the app. Continue?', backupConfirmDelete: 'Delete this backup?',
@@ -189,7 +189,7 @@ const I18N = {
     encryptNote: 'Encrypt note', decryptNote: 'Decrypt note', enterPassword: 'Enter password', encrypted: 'Encrypted', wrongPassword: 'Wrong password',
     versionHistory: 'Version history', restoreVersion: 'Restore version', noVersions: 'No versions', versionCount: 'Versions',
     focusMode: 'Focus mode', exitFocus: 'Exit focus',
-    shareImage: 'Share as image', imageSaved: 'Image saved',
+    shareImage: 'Share as image', imageSaved: 'Image saved', exportMD: 'Export Markdown', exportPDF: 'Export PDF', exportDone: 'Exported to Desktop',
     timelineEmpty: 'No activity', tlNoteCreated: 'Note created', tlNoteUpdated: 'Note updated', tlTodoCreated: 'Todo created', tlTodoCompleted: 'Todo completed',
     importData: 'Import data', importSelect: 'Select file', importResult: 'Import complete', importError: 'Import failed',
     toggleTodo: 'Toggle complete', undoDeleteFailed: 'Item permanently deleted, cannot be restored',
@@ -235,7 +235,7 @@ const I18N = {
     groupToday: 'Hôm nay', groupThisWeek: 'Tuần này', groupEarlier: 'Trước đó', groupAZ: 'A-Z', tomorrow: 'Ngày mai',
     noteTitle: 'Ghi chú',
     filterAll: 'Tất cả', filterActive: 'Chưa xong', filterCompleted: 'Đã xong',
-    searchPlaceholder: 'Tìm kiếm...', searchNoResults: 'Không tìm thấy kết quả', clearSearch: 'Xóa tìm kiếm',
+    searchPlaceholder: 'Tìm kiếm...', searchNoResults: 'Không tìm thấy kết quả', clearSearch: 'Xóa tìm kiếm', todoPending: '⬜ Chưa làm', todoDone: '✅ Hoàn thành',
     reminderSoon: 'Sắp đến hạn', reminderDismiss: 'Đã biết', reminderDueOn: 'Hạn chót',
     backup: 'Sao lưu', backupNow: 'Sao lưu ngay', backupList: 'Danh sách sao lưu', backupRestore: 'Khôi phục', backupDelete: 'Xóa sao lưu',
     backupConfirmRestore: 'Khôi phục sẽ khởi động lại ứng dụng. Tiếp tục?', backupConfirmDelete: 'Xóa sao lưu này?',
@@ -265,7 +265,7 @@ const I18N = {
     encryptNote: 'Mã hóa ghi chú', decryptNote: 'Giải mã ghi chú', enterPassword: 'Nhập mật khẩu', encrypted: 'Đã mã hóa', wrongPassword: 'Sai mật khẩu',
     versionHistory: 'Lịch sử phiên bản', restoreVersion: 'Khôi phục phiên bản', noVersions: 'Không có phiên bản', versionCount: 'Phiên bản',
     focusMode: 'Chế độ tập trung', exitFocus: 'Thoát tập trung',
-    shareImage: 'Chia sẻ dạng ảnh', imageSaved: 'Đã lưu ảnh',
+    shareImage: 'Chia sẻ dạng ảnh', imageSaved: 'Đã lưu ảnh', exportMD: 'Xuất Markdown', exportPDF: 'Xuất PDF', exportDone: 'Đã xuất ra Desktop',
     timelineEmpty: 'Không có hoạt động', tlNoteCreated: 'Ghi chú đã tạo', tlNoteUpdated: 'Ghi chú đã cập nhật', tlTodoCreated: 'Việc đã tạo', tlTodoCompleted: 'Việc đã hoàn thành',
     importData: 'Nhập dữ liệu', importSelect: 'Chọn tệp', importResult: 'Nhập hoàn thành', importError: 'Nhập thất bại',
     toggleTodo: 'Chuyển hoàn thành', undoDeleteFailed: 'Mục đã xóa vĩnh viễn, không thể khôi phục',
@@ -1140,6 +1140,8 @@ const NoteEditor = {
         <button class="btn btn-secondary" @click="handleCancel">{{ t('cancel') }}</button>
         <button class="btn btn-secondary" @click="copyNoteContent" :title="t('copyNote')">📋</button>
         <button v-if="note && note.id" class="btn btn-secondary" @click="shareAsImage" :title="t('shareImage')">📷</button>
+        <button v-if="note && note.id" class="btn btn-secondary" @click="exportMarkdown" :title="t('exportMD')">📝</button>
+        <button v-if="note && note.id" class="btn btn-secondary" @click="exportPDF" :title="t('exportPDF')">📄</button>
         <button class="btn btn-primary" @click="handleSave" :disabled="!canSave">{{ t('save') }}</button>
       </div>
 
@@ -1610,6 +1612,32 @@ const NoteEditor = {
           color: selectedColor.value
         });
         alert(t('imageSaved'));
+      } catch (_) {}
+    };
+
+    // F9: Export note as Markdown
+    const exportMarkdown = async () => {
+      if (!props.note || !props.note.id) return;
+      try {
+        await window.electronAPI.note.exportMarkdown({
+          title: title.value,
+          content: content.value,
+          color: selectedColor.value
+        });
+        alert(t('exportDone') || 'Exported to Desktop');
+      } catch (_) {}
+    };
+
+    // F9: Export note as PDF
+    const exportPDF = async () => {
+      if (!props.note || !props.note.id) return;
+      try {
+        await window.electronAPI.note.exportPDF({
+          title: title.value,
+          content: content.value,
+          color: selectedColor.value
+        });
+        alert(t('exportDone') || 'Exported to Desktop');
       } catch (_) {}
     };
     
@@ -2214,6 +2242,8 @@ const NoteEditor = {
       restoreVersion,
       backlinks,
       shareAsImage,
+      exportMarkdown,
+      exportPDF,
       t
     };
   }
@@ -2870,25 +2900,57 @@ const TodoEditor = {
 const BoardView = {
   template: `
     <div class="board-view">
-      <div v-for="col in columns" :key="col.color" class="board-column"
-        @dragover.prevent="onColumnDragOver($event, col.color)"
-        @dragleave="onColumnDragLeave($event)"
-        @drop="onColumnDrop($event, col.color)"
-      >
-        <div class="board-column-header" :style="{ borderBottomColor: col.color }">
-          <span>{{ col.label }}</span>
-          <span class="board-col-count">{{ col.notes.length }}</span>
-        </div>
-        <div class="board-column-body">
-          <div v-if="col.notes.length === 0" class="board-column-empty">{{ t('boardEmpty') }}</div>
-          <div v-for="note in col.notes" :key="note.id" class="board-card"
-            draggable="true"
-            @dragstart="onCardDragStart($event, note)"
-            @dragend="onCardDragEnd"
-            @click="$emit('edit', note)"
-          >
-            <div class="board-card-title">{{ note.title || t('noteTitle') }}</div>
+      <div class="board-mode-toggle">
+        <button class="btn" :class="{ 'btn-primary': mode === 'notes' }" @click="mode = 'notes'">{{ t('tabNotes') }}</button>
+        <button class="btn" :class="{ 'btn-primary': mode === 'todos' }" @click="mode = 'todos'">{{ t('tabTodos') }}</button>
+      </div>
+      <!-- 笔记看板（按颜色分列）-->
+      <div v-if="mode === 'notes'" class="board-columns-row">
+        <div v-for="col in noteColumns" :key="col.color" class="board-column"
+          @dragover.prevent="onColumnDragOver($event, col.color)"
+          @dragleave="onColumnDragLeave($event)"
+          @drop="onColumnDrop($event, col.color)"
+        >
+          <div class="board-column-header" :style="{ borderBottomColor: col.color }">
+            <span>{{ col.label }}</span>
+            <span class="board-col-count">{{ col.notes.length }}</span>
+          </div>
+          <div class="board-column-body">
+            <div v-if="col.notes.length === 0" class="board-column-empty">{{ t('boardEmpty') }}</div>
+            <div v-for="note in col.notes" :key="note.id" class="board-card"
+              draggable="true"
+              @dragstart="onCardDragStart($event, note)"
+              @dragend="onCardDragEnd"
+              @click="$emit('edit', note)"
+            >
+              <div class="board-card-title">{{ note.title || t('noteTitle') }}</div>
               <div class="board-card-preview" v-if="note.content">{{ stripHtml(note.content) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 待办看板（按完成状态分列）-->
+      <div v-if="mode === 'todos'" class="board-columns-row">
+        <div v-for="col in todoColumns" :key="col.status" class="board-column"
+          @dragover.prevent="onTodoColumnDragOver($event, col.status)"
+          @dragleave="onColumnDragLeave($event)"
+          @drop="onTodoColumnDrop($event, col.status)"
+        >
+          <div class="board-column-header" :style="{ borderBottomColor: col.color }">
+            <span>{{ col.label }}</span>
+            <span class="board-col-count">{{ col.todos.length }}</span>
+          </div>
+          <div class="board-column-body">
+            <div v-if="col.todos.length === 0" class="board-column-empty">{{ t('boardEmpty') }}</div>
+            <div v-for="todo in col.todos" :key="todo.id" class="board-card board-card-todo"
+              draggable="true"
+              @dragstart="onTodoDragStart($event, todo)"
+              @dragend="onCardDragEnd"
+            >
+              <div class="board-card-title">{{ todo.title }}</div>
+              <div class="board-card-preview" v-if="todo.due_date">📅 {{ formatDate(todo.due_date) }}</div>
+              <div class="board-card-preview" v-if="todo.priority">⭐ {{ todo.priority }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -2896,12 +2958,15 @@ const BoardView = {
   `,
   props: {
     notes: { type: Array, default: () => [] },
+    todos: { type: Array, default: () => [] },
     searchQuery: { type: String, default: '' }
   },
   emits: ['edit', 'update-note', 'refresh'],
   setup(props, { emit }) {
     const draggedNote = ref(null);
-    const columns = computed(() => {
+    const draggedTodo = ref(null);
+    var mode = ref('notes');
+    const noteColumns = computed(() => {
       const filtered = props.searchQuery
         ? props.notes.filter((n) => {
             const q = props.searchQuery.toLowerCase();
@@ -2914,8 +2979,25 @@ const BoardView = {
         notes: filtered.filter((n) => n.color === c.value)
       }));
     });
+    // F8: 待办看板 — 按完成状态分 2 列
+    const todoColumns = computed(() => {
+      const filtered = props.searchQuery
+        ? props.todos.filter((td) => {
+            const q = props.searchQuery.toLowerCase();
+            return (td.title || '').toLowerCase().includes(q);
+          })
+        : props.todos.filter((td) => !td.is_subtask);
+      return [
+        { status: 0, color: '#f59e0b', label: t('todoPending') || '⬜ 待办', todos: filtered.filter((td) => !td.completed) },
+        { status: 1, color: '#22c55e', label: t('todoDone') || '✅ 已完成', todos: filtered.filter((td) => td.completed) }
+      ];
+    });
     const stripHtml = (html) => {
       return String(html).replace(/<[^>]*>/g, '').slice(0, 80);
+    };
+    const formatDate = (d) => {
+      if (!d) return '';
+      return d.slice(0, 10);
     };
     const onCardDragStart = (e, note) => {
       draggedNote.value = note;
@@ -2924,6 +3006,7 @@ const BoardView = {
     };
     const onCardDragEnd = () => {
       draggedNote.value = null;
+      draggedTodo.value = null;
     };
     const onColumnDragOver = (e, color) => {
       e.currentTarget.classList.add('drag-over');
@@ -2939,7 +3022,24 @@ const BoardView = {
         emit('refresh');
       } catch (_) {}
     };
-    return { columns, stripHtml, onCardDragStart, onCardDragEnd, onColumnDragOver, onColumnDragLeave, onColumnDrop, t };
+    // F8: 待办拖拽
+    const onTodoDragStart = (e, todo) => {
+      draggedTodo.value = todo;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(todo.id));
+    };
+    const onTodoColumnDragOver = (e, status) => {
+      e.currentTarget.classList.add('drag-over');
+    };
+    const onTodoColumnDrop = async (e, status) => {
+      e.currentTarget.classList.remove('drag-over');
+      if (!draggedTodo.value || Number(draggedTodo.value.completed) === status) return;
+      try {
+        await window.electronAPI.todos.update(draggedTodo.value.id, { completed: status });
+        emit('refresh');
+      } catch (_) {}
+    };
+    return { mode, noteColumns, todoColumns, stripHtml, formatDate, onCardDragStart, onCardDragEnd, onColumnDragOver, onColumnDragLeave, onColumnDrop, onTodoDragStart, onTodoColumnDragOver, onTodoColumnDrop, t };
   }
 };
 
@@ -3754,7 +3854,7 @@ const App = {
               <div class="content-header">
                 <div class="content-title">{{ t('tabBoard') }}</div>
               </div>
-              <BoardView :notes="notes" :search-query="debouncedSearchQuery" @edit="editNote" @refresh="loadAll" />
+              <BoardView :notes="notes" :todos="todos" :search-query="debouncedSearchQuery" @edit="editNote" @refresh="loadAll" />
             </template>
 
             <!-- Trash Tab (Recycle Bin) -->
@@ -4246,6 +4346,21 @@ const pet3DEnabled    = ref(false);  // sidebar_state 'pet3DEnabled' — 3D rend
 
     // Ctrl+P for command palette
     const onGlobalKeydown = (e) => {
+      // F5: `/` 聚焦搜索框（不在编辑器/输入框时触发）
+      if (e.key === '/' && !showingEditor.value && !showSettings.value && !showCommandPalette.value) {
+        var active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+        e.preventDefault();
+        var searchInput = document.querySelector('.search-box');
+        if (searchInput) { searchInput.focus(); searchInput.select(); }
+      }
+      // F5: `Esc` 清空搜索（搜索框聚焦时）
+      if (e.key === 'Escape' && searchQuery.value) {
+        var active2 = document.activeElement;
+        if (active2 && active2.classList && active2.classList.contains('search-box')) {
+          clearSearch();
+        }
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
         e.preventDefault();
         showCommandPalette.value = !showCommandPalette.value;

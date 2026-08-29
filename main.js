@@ -1327,6 +1327,80 @@ function registerIpcHandlers() {
     return { path: outFile };
   }));
 
+  // F9: Export note as Markdown — simple HTML→MD conversion (no external lib).
+  ipcMain.handle('note:exportMarkdown', safe(async (_evt, noteData) => {
+    const noteTitle = noteData.title || 'Note';
+    const noteContent = noteData.content || '';
+    // Simple HTML→Markdown conversion
+    var md = noteContent;
+    md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+    md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+    md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+    md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+    md = md.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+    md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+    md = md.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+    md = md.replace(/<s[^>]*>(.*?)<\/s>/gi, '~~$1~~');
+    md = md.replace(/<u[^>]*>(.*?)<\/u>/gi, '$1');
+    md = md.replace(/<br\s*\/?>/gi, '\n');
+    md = md.replace(/<\/p>/gi, '\n\n');
+    md = md.replace(/<p[^>]*>/gi, '');
+    md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+    md = md.replace(/<\/?(ul|ol)[^>]*>/gi, '\n');
+    md = md.replace(/<pre[^>]*>(.*?)<\/pre>/gis, '```\n$1\n```\n\n');
+    md = md.replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`');
+    md = md.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, '> $1\n\n');
+    md = md.replace(/<hr\s*\/?>/gi, '---\n\n');
+    md = md.replace(/<a[^>]*href="(.*?)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+    md = md.replace(/<img[^>]*src="(.*?)"[^>]*>/gi, '![]($1)');
+    md = md.replace(/<\/?(div|span)[^>]*>/gi, '');
+    md = md.replace(/<th[^>]*>(.*?)<\/th>/gi, '| $1 ');
+    md = md.replace(/<td[^>]*>(.*?)<\/td>/gi, '| $1 ');
+    md = md.replace(/<\/tr>/gi, '|\n');
+    md = md.replace(/<tr[^>]*>/gi, '');
+    md = md.replace(/<\/?(table|thead|tbody)[^>]*>/gi, '\n');
+    md = md.replace(/\n{3,}/g, '\n\n');
+    md = md.replace(/<[^>]+>/g, ''); // strip remaining tags
+    md = md.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+    var fullMd = '# ' + noteTitle + '\n\n' + md.trim() + '\n';
+    const desktop = path.join(os.homedir(), 'Desktop');
+    const safeTitle = noteTitle.replace(/[^a-zA-Z0-9\u4e00-\u9fff_-]/g, '_').slice(0, 40);
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const outFile = path.join(desktop, `stickytodo-${safeTitle}-${ts}.md`);
+    fs.writeFileSync(outFile, fullMd, 'utf-8');
+    return { path: outFile };
+  }));
+
+  // F9: Export note as PDF — reuse the HTML render from exportImage + printToPDF.
+  ipcMain.handle('note:exportPDF', safe(async (_evt, noteData) => {
+    const noteTitle = noteData.title || 'Note';
+    const noteContent = noteData.content || '';
+    const rawColor = noteData.color || 'yellow';
+    const colorMap = { yellow: '#fef3c7', green: '#d1fae5', blue: '#dbeafe', pink: '#fce7f3', gray: '#f3f4f6', purple: '#ede9fe', charcoal: '#4b5563' };
+    let noteColor = colorMap[rawColor] || rawColor;
+    if (!/^#[0-9a-fA-F]{3,8}$/.test(noteColor)) noteColor = '#fef3c7';
+    const safeContent = noteContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    const allowedBody = safeContent
+      .replace(/&lt;(\/?)(b|i|u|s|strong|em|br|hr|ul|ol|li|p|div|span|pre|code|table|thead|tbody|tr|th|td|blockquote|h[1-6])\b([^&]*?)&gt;/gi, '<$1$2$3>');
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:${noteColor};padding:20px;font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6}.note-title{font-size:18px;font-weight:bold;margin-bottom:10px}.note-body{word-wrap:break-word;overflow:hidden}.note-body ul,.note-body ol{padding-left:20px}.note-body pre{background:#f5f5f5;padding:8px;border-radius:4px;overflow-x:auto}.note-body table{border-collapse:collapse;width:100%}.note-body th,.note-body td{border:1px solid #ddd;padding:6px 8px}.note-body blockquote{border-left:3px solid #ddd;padding-left:12px;color:#666}.note-body hr{border:none;border-top:1px solid #ddd;margin:12px 0}</style></head><body><div class="note-title">${noteTitle.replace(/</g,'&lt;')}</div><div class="note-body">${allowedBody}</div></body></html>`;
+    const exportWin = new BrowserWindow({
+      width: 400,
+      height: 500,
+      show: false,
+      webPreferences: { offscreen: true },
+    });
+    await exportWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent));
+    await new Promise((r) => setTimeout(r, 500));
+    const pdfBuffer = await exportWin.webContents.printToPDF({ pageSize: 'A4', printBackground: true });
+    exportWin.close();
+    const desktop = path.join(os.homedir(), 'Desktop');
+    const safeTitle = noteTitle.replace(/[^a-zA-Z0-9\u4e00-\u9fff_-]/g, '_').slice(0, 40);
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const outFile = path.join(desktop, `stickytodo-${safeTitle}-${ts}.pdf`);
+    fs.writeFileSync(outFile, pdfBuffer);
+    return { path: outFile };
+  }));
+
   // ---- Data Import ----
   ipcMain.handle('data:importFromFile', safe(async (_evt, jsonData) => {
     if (!jsonData || typeof jsonData !== 'object') return { error: 'invalid format' };
