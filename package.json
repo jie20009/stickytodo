@@ -52,6 +52,8 @@
       "three.min.js",
       "GLTFLoader.js",
       "pet-renderer-3d.js",
+      "assets/**/*",
+      "notes/**/*",
       "node_modules/**/*"
     ],
     "win": {
