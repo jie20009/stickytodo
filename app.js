@@ -3048,7 +3048,7 @@ const BoardView = {
       const filtered = props.searchQuery
         ? props.notes.filter((n) => {
             const q = props.searchQuery.toLowerCase();
-            return (n.title || '').toLowerCase().includes(q) || (n.content || '').replace(/<[^>]*>/g, '').toLowerCase().includes(q);
+            return !n.is_archived && ((n.title || '').toLowerCase().includes(q) || (n.content || '').replace(/<[^>]*>/g, '').toLowerCase().includes(q));
           })
         : props.notes.filter((n) => !n.is_archived);
       return NOTE_COLORS.map((c) => ({
@@ -5299,6 +5299,7 @@ const pet3DEnabled    = ref(false);  // sidebar_state 'pet3DEnabled' — 3D rend
             // BUG-06: Window failed to open — clean up the ghost record.
             await window.electronAPI.todos.delete(newTodo.id);
           }
+          loadTodos();
         }
       } catch (e) {
         console.error('createTodoInWindow failed:', e);
