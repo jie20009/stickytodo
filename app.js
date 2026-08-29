@@ -2901,8 +2901,8 @@ const BoardView = {
   template: `
     <div class="board-view">
       <div class="board-mode-toggle">
-        <button class="btn" :class="{ 'btn-primary': mode === 'notes' }" @click="mode = 'notes'">{{ t('tabNotes') }}</button>
         <button class="btn" :class="{ 'btn-primary': mode === 'todos' }" @click="mode = 'todos'">{{ t('tabTodos') }}</button>
+        <button class="btn" :class="{ 'btn-primary': mode === 'notes' }" @click="mode = 'notes'">{{ t('tabNotes') }}</button>
       </div>
       <!-- 笔记看板（按颜色分列）-->
       <div v-if="mode === 'notes'" class="board-columns-row">
@@ -3600,15 +3600,6 @@ const App = {
             >
               {{ t('tabAll') }}
             </button>
-            <button v-if="showTabNotes"
-              class="tab-btn" 
-              :class="{ active: currentTab === 'notes' }"
-              @click="currentTab = 'notes'"
-              role="tab"
-              :aria-selected="currentTab === 'notes'"
-            >
-              {{ t('tabNotes') }}
-            </button>
             <button v-if="showTabTodos"
               class="tab-btn" 
               :class="{ active: currentTab === 'todos' }"
@@ -3617,6 +3608,15 @@ const App = {
               :aria-selected="currentTab === 'todos'"
             >
               {{ t('tabTodos') }}
+            </button>
+            <button v-if="showTabNotes"
+              class="tab-btn" 
+              :class="{ active: currentTab === 'notes' }"
+              @click="currentTab = 'notes'"
+              role="tab"
+              :aria-selected="currentTab === 'notes'"
+            >
+              {{ t('tabNotes') }}
             </button>
             <button v-if="showTabTimeline"
               class="tab-btn" 
@@ -3974,8 +3974,8 @@ const App = {
               <div class="settings-section-title">👁️ {{ t('tabVisibility') }}</div>
               <div class="settings-checkbox-group settings-grid-2col">
                 <label class="settings-checkbox"><input type="checkbox" v-model="showTabAll" @change="saveTabVisibility" /> {{ t('tabAll') }}</label>
-                <label class="settings-checkbox"><input type="checkbox" v-model="showTabNotes" @change="saveTabVisibility" /> {{ t('tabNotes') }}</label>
                 <label class="settings-checkbox"><input type="checkbox" v-model="showTabTodos" @change="saveTabVisibility" /> {{ t('tabTodos') }}</label>
+                <label class="settings-checkbox"><input type="checkbox" v-model="showTabNotes" @change="saveTabVisibility" /> {{ t('tabNotes') }}</label>
                 <label class="settings-checkbox"><input type="checkbox" v-model="showTabTimeline" @change="saveTabVisibility" /> {{ t('tabTimeline') }}</label>
                 <label class="settings-checkbox"><input type="checkbox" v-model="showTabTrash" @change="saveTabVisibility" /> 🗑 {{ t('trash') }}</label>
                 <label class="settings-checkbox"><input type="checkbox" v-model="showTabCalendar" @change="saveTabVisibility" /> {{ t('tabCalendar') }}</label>
@@ -4260,7 +4260,7 @@ const pet3DEnabled    = ref(false);  // sidebar_state 'pet3DEnabled' — 3D rend
         await window.electronAPI.sidebar.setState('tabNotes', showTabNotes.value ? 'true' : 'false');
         await window.electronAPI.sidebar.setState('tabTodos', showTabTodos.value ? 'true' : 'false');
         // If the currently active tab was just hidden, fall back to a visible one.
-        const fallback = showTabAll.value ? 'all' : showTabNotes.value ? 'notes' : showTabTodos.value ? 'todos' : 'all';
+        const fallback = showTabAll.value ? 'all' : showTabTodos.value ? 'todos' : showTabNotes.value ? 'notes' : 'all';
         if (currentTab.value === 'timeline' && !showTabTimeline.value) currentTab.value = fallback;
         if (currentTab.value === 'trash' && !showTabTrash.value) currentTab.value = fallback;
         if (currentTab.value === 'calendar' && !showTabCalendar.value) currentTab.value = fallback;
