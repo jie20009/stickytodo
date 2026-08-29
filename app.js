@@ -2929,9 +2929,8 @@ const BoardView = {
           </div>
         </div>
       </div>
-      <!-- 待办看板（按完成状态分列）-->
-      <div v-if="mode === 'todos'" class="board-columns-row">
-        <div v-for="col in todoColumns" :key="col.status" class="board-column"
+      <!-- 待办看板（按完成状态分列）— 默认显示 -->
+      <div v-if="mode === 'todos'" class="board-columns-row">        <div v-for="col in todoColumns" :key="col.status" class="board-column"
           @dragover.prevent="onTodoColumnDragOver($event, col.status)"
           @dragleave="onColumnDragLeave($event)"
           @drop="onTodoColumnDrop($event, col.status)"
@@ -2959,13 +2958,15 @@ const BoardView = {
   props: {
     notes: { type: Array, default: () => [] },
     todos: { type: Array, default: () => [] },
-    searchQuery: { type: String, default: '' }
+    searchQuery: { type: String, default: '' },
+    initialMode: { type: String, default: 'todos' }
   },
   emits: ['edit', 'update-note', 'refresh'],
   setup(props, { emit }) {
     const draggedNote = ref(null);
     const draggedTodo = ref(null);
-    var mode = ref('notes');
+    var mode = ref(props.initialMode || 'todos');
+    // debug: 确认 mode 初始值
     const noteColumns = computed(() => {
       const filtered = props.searchQuery
         ? props.notes.filter((n) => {
@@ -2984,9 +2985,9 @@ const BoardView = {
       const filtered = props.searchQuery
         ? props.todos.filter((td) => {
             const q = props.searchQuery.toLowerCase();
-            return (td.title || '').toLowerCase().includes(q);
+            return !td.is_subtask && !td.is_archived && (td.title || '').toLowerCase().includes(q);
           })
-        : props.todos.filter((td) => !td.is_subtask);
+        : props.todos.filter((td) => !td.is_subtask && !td.is_archived);
       return [
         { status: 0, color: '#f59e0b', label: t('todoPending') || '⬜ 待办', todos: filtered.filter((td) => !td.completed) },
         { status: 1, color: '#22c55e', label: t('todoDone') || '✅ 已完成', todos: filtered.filter((td) => td.completed) }
@@ -3854,7 +3855,7 @@ const App = {
               <div class="content-header">
                 <div class="content-title">{{ t('tabBoard') }}</div>
               </div>
-              <BoardView :notes="notes" :todos="todos" :search-query="debouncedSearchQuery" @edit="editNote" @refresh="loadAll" />
+              <BoardView :notes="notes" :todos="todos" :search-query="debouncedSearchQuery" initial-mode="todos" @edit="editNote" @refresh="loadAll" />
             </template>
 
             <!-- Trash Tab (Recycle Bin) -->
@@ -6272,3 +6273,4 @@ const pet3DEnabled    = ref(false);  // sidebar_state 'pet3DEnabled' — 3D rend
 // ============================================
 const app = createApp(App);
 app.mount('#app');
+
