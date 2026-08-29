@@ -1663,19 +1663,28 @@ ipcMain.handle('pet:hide', safe(async (_evt, petId) => {
   ipcMain.handle('pet:showContextMenu', safe(async (_evt, screenX, screenY, state) => {
     const petId = state && state.petId ? state.petId : DEFAULT_PET_ID;
     const isChasing = !!(state && state.isChasing);
+    // 读取当前语言，动态显示菜单文字
+    const locale = db.getSidebarState('locale') || 'zh';
+    const i18n = {
+      zh: { showSidebar:'显示侧边栏', newNoteWindow:'新建便签窗口', newTodoWindow:'新建待办窗口', openSettings:'打开设置', chaseMouse:'追逐鼠标', climbWindow:'攀爬窗口', feedPet:'喂食', hidePet:'隐藏桌宠', closePet:'关闭桌宠' },
+      en: { showSidebar:'Show sidebar', newNoteWindow:'New note (window)', newTodoWindow:'New todo (window)', openSettings:'Open settings', chaseMouse:'Chase mouse', climbWindow:'Climb window', feedPet:'Feed pet', hidePet:'Hide pet', closePet:'Close pet' },
+      vi: { showSidebar:'Hiện thanh bên', newNoteWindow:'Ghi chú mới (cửa sổ)', newTodoWindow:'Việc mới (cửa sổ)', openSettings:'Cài đặt', chaseMouse:'Đuổi chuột', climbWindow:'Trèo cửa sổ', feedPet:'Cho ăn', hidePet:'Ẩn thú cưng', closePet:'Đóng thú cưng' },
+    };
+    const L = i18n[locale] || i18n.en;
     const menu = Menu.buildFromTemplate([
-      { label: 'Show sidebar',  click: () => toggleSidebar() },
-      { label: 'New todo',      click: () => showMainWindowAndSend('pet:newTodo') },
-      { label: 'Open settings', click: () => showMainWindowAndSend('pet:openSettings') },
+      { label: L.showSidebar,  click: () => toggleSidebar() },
+      { label: L.newNoteWindow,  click: () => showMainWindowAndSend('pet:newNoteWindow') },
+      { label: L.newTodoWindow,  click: () => showMainWindowAndSend('pet:newTodoWindow') },
+      { label: L.openSettings, click: () => showMainWindowAndSend('pet:openSettings') },
       { type: 'separator' },
-      { label: (isChasing ? '✓ ' : '') + 'Chase mouse', click: () => {
+      { label: (isChasing ? '✓ ' : '') + L.chaseMouse, click: () => {
           if (isChasing) stopMouseChase(petId); else startMouseChase(petId);
         } },
-      { label: 'Climb window', click: () => climbOwnWindows(petId) },
+      { label: L.climbWindow, click: () => climbOwnWindows(petId) },
       { type: 'separator' },
-      { label: 'Feed pet',  click: () => applyInteraction(petId, 'feed', 5, 5, 20, 2) },
-      { label: 'Hide pet',  click: () => { const w = petWindows.get(String(petId||DEFAULT_PET_ID)); if (w && !w.isDestroyed()) w.hide(); } },
-      { label: 'Close pet', click: () => closePetWindow(petId) },
+      { label: L.feedPet,  click: () => applyInteraction(petId, 'feed', 5, 5, 20, 2) },
+      { label: L.hidePet,  click: () => { const w = petWindows.get(String(petId||DEFAULT_PET_ID)); if (w && !w.isDestroyed()) w.hide(); } },
+      { label: L.closePet, click: () => closePetWindow(petId) },
     ]);
     menu.popup({ x: Math.round(screenX), y: Math.round(screenY) });
     return true;

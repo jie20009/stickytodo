@@ -4920,6 +4920,13 @@ const pet3DEnabled    = ref(false);  // sidebar_state 'pet3DEnabled' — 3D rend
             showNewTodoEditor();
           });
         }
+        // 右键桌宠 → 弹独立窗口新建便签/待办
+        if (window.electronAPI.pet && window.electronAPI.pet.onNewNoteWindow) {
+          window.electronAPI.pet.onNewNoteWindow(() => { createNoteInWindow(); });
+        }
+        if (window.electronAPI.pet && window.electronAPI.pet.onNewTodoWindow) {
+          window.electronAPI.pet.onNewTodoWindow(() => { createTodoInWindow(); });
+        }
       } catch (error) {
         console.error('Failed to load sidebar state:', error);
       }

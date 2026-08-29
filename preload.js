@@ -181,6 +181,8 @@ const CHANNELS = {
     toggleSidebar:  'pet:toggleSidebar',
     openSettings:   'pet:openSettings',
     newTodo:        'pet:newTodo',
+    newNoteWindow:  'pet:newNoteWindow',
+    newTodoWindow:  'pet:newTodoWindow',
     // Stage 5.1 — mouse chase
     chaseMouse:     'pet:chaseMouse',
     stopChase:      'pet:stopChase',
@@ -202,6 +204,8 @@ const CHANNELS = {
     onChangedEvent: 'pet:changed',
     openSettingsEv: 'pet:openSettings',
     newTodoEv:      'pet:newTodo',
+    newNoteWindowEv: 'pet:newNoteWindow',
+    newTodoWindowEv: 'pet:newTodoWindow',
     // Stage 5.3 — morph event (main.js sends this to the pet window)
     morphEvent:     'pet:morph',
   },
@@ -372,6 +376,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onChanged:     (callback)      => ipcRenderer.on(CHANNELS.pet.onChangedEvent, (_evt, payload) => callback(payload)),
     onOpenSettings:(callback)      => ipcRenderer.on(CHANNELS.pet.openSettingsEv, () => callback()),
     onNewTodo:     (callback)      => ipcRenderer.on(CHANNELS.pet.newTodoEv, () => callback()),
+    onNewNoteWindow: (callback)    => ipcRenderer.on(CHANNELS.pet.newNoteWindowEv, () => callback()),
+    onNewTodoWindow: (callback)    => ipcRenderer.on(CHANNELS.pet.newTodoWindowEv, () => callback()),
     onMorph:       (callback)      => ipcRenderer.on(CHANNELS.pet.morphEvent, (_evt, payload) => callback(payload)),
   },
 
