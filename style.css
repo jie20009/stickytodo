@@ -2359,12 +2359,17 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .settings-section-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .settings-radio-group {

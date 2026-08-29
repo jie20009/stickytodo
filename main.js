@@ -1830,11 +1830,16 @@ if (!gotTheLock) {
         const todos = db.getTodos();
         const now = new Date();
         const fiveMinLater = new Date(now.getTime() + 5 * 60 * 1000);
+        // 1-hour window key: floor(now / 1h) gives a unique number per 1h period.
+        // Each todo gets reminded at most once per 1-hour window.
+        const ONE_HOUR_MS = 1 * 60 * 60 * 1000;
+        const windowKey = Math.floor(now.getTime() / ONE_HOUR_MS);
         for (const todo of todos) {
           if (todo.completed || !todo.due_date) continue;
           const due = new Date(todo.due_date);
+          // Remind when due is within 5 min OR already overdue (keep reminding every 2h)
           if (due >= now && due <= fiveMinLater) {
-            const notifiedKey = `notified_${todo.id}_${todo.due_date.split('T')[0]}`;
+            const notifiedKey = `notified_${todo.id}_${windowKey}`;
             const notified = db.getSidebarState(notifiedKey);
             if (!notified) {
               db.setSidebarState(notifiedKey, '1');
@@ -1880,13 +1885,16 @@ if (!gotTheLock) {
       try {
         const todos2 = db.getTodos();
         const now2 = new Date();
+        // 1-hour window key (same as todoDue reminder).
+        const ONE_HOUR_MS_O = 1 * 60 * 60 * 1000;
+        const windowKeyO = Math.floor(now2.getTime() / ONE_HOUR_MS_O);
         for (const todo of todos2) {
           if (todo.completed || !todo.due_date) continue;
           const due = new Date(todo.due_date);
           if (due >= now2) continue;     // not yet overdue
-          // Use a per-todo, per-day marker so the penalty only applies once
-          // per overdue event.
-          const overdueKey = `overdue_penalty_${todo.id}_${todo.due_date.split('T')[0]}`;
+          // Use a per-todo, per-2h-window marker so the penalty/reminder
+          // applies once per 2-hour window (not once per day).
+          const overdueKey = `overdue_penalty_${todo.id}_${windowKeyO}`;
           if (db.getSidebarState(overdueKey)) continue;
           db.setSidebarState(overdueKey, '1');
           try {
@@ -1950,23 +1958,36 @@ if (!gotTheLock) {
         logError(`Repeat task check error: ${err.message}`);
       }
 
-      // Mood decay: mood naturally drifts toward baseline (50) so the pet
+      // Mood decay/recovery: mood naturally drifts toward baseline (50) so the pet
       // settles back to 'idle' within ~1-2 minutes after interactions.
       // Rate: 4 pts/min; accelerated to 6 pts/min when in happy/celebrate
       // zone (mood ≥ 90) to prevent prolonged excitement.
-      // Energy decay removed — it had no recovery path and caused permanent sleep.
+      // FIX: mood below 50 now RECOVERS toward baseline (was only decaying
+      // from above 50, so pets stuck in anxious/sleep forever after overdue
+      // penalties dragged mood down).
       try {
         const MOOD_BASELINE = 50;
         const DECAY_NORMAL = 4;
         const DECAY_FAST   = 6;   // when mood ≥ 90
+        const RECOVERY_RATE = 4;  // pts/min when mood < 50
         const allPets = db.getAllPetStates ? db.getAllPetStates() : [db.getPetState(DEFAULT_PET_ID)];
         for (const pet of allPets) {
           if (!pet || !pet.pet_id) continue;
-          if (typeof pet.mood === 'number' && pet.mood > MOOD_BASELINE) {
-            const rate = pet.mood >= 90 ? DECAY_FAST : DECAY_NORMAL;
-            db.updatePetState(pet.pet_id, { mood: Math.max(MOOD_BASELINE, pet.mood - rate) });
-            const updated = db.getPetState(pet.pet_id);
-            broadcastPetState(pet.pet_id, updated, { event: 'moodDecay' });
+          if (typeof pet.mood === 'number') {
+            var newMoodVal = pet.mood;
+            if (pet.mood > MOOD_BASELINE) {
+              // Decay down toward 50
+              const rate = pet.mood >= 90 ? DECAY_FAST : DECAY_NORMAL;
+              newMoodVal = Math.max(MOOD_BASELINE, pet.mood - rate);
+            } else if (pet.mood < MOOD_BASELINE) {
+              // Recover up toward 50
+              newMoodVal = Math.min(MOOD_BASELINE, pet.mood + RECOVERY_RATE);
+            }
+            if (newMoodVal !== pet.mood) {
+              db.updatePetState(pet.pet_id, { mood: newMoodVal });
+              const updated = db.getPetState(pet.pet_id);
+              broadcastPetState(pet.pet_id, updated, { event: 'moodDecay' });
+            }
           }
         }
       } catch (e) { /* best-effort */ }

@@ -31,8 +31,7 @@
   function moodToExpression(mood) {
     if (mood >= 97) return 'celebrate';
     if (mood >= 90) return 'happy';
-    if (mood >= 30) return 'idle';
-    if (mood >= 15) return 'anxious';
+    if (mood >= 15) return 'idle';
     return 'sleep';
   }
 

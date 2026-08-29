@@ -106,10 +106,10 @@ function moodToExpression(mood) {
   // Baseline mood is 50 — pet idles calmly by default.
   // 'happy' requires meaningful interaction (mood ≥ 90).
   // 'celebrate' is rare, reserved for big events (mood ≥ 97).
+  // anxious (😰 闪烁) 已移除——体验差无实际价值，mood < 30 用 idle 代替。
   if (mood >= 97) return 'celebrate';
   if (mood >= 90) return 'happy';
-  if (mood >= 30) return 'idle';
-  if (mood >= 15) return 'anxious';
+  if (mood >= 15) return 'idle';
   return 'sleep';
 }
 

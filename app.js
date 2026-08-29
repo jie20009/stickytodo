@@ -1,4 +1,4 @@
-// ============================================
+﻿// ============================================
 // StickyTodo - Vue 3 Application
 // ============================================
 
@@ -3853,16 +3853,47 @@ const App = {
           <div class="settings-body">
             <!-- Language -->
             <div class="settings-section">
-              <div class="settings-section-title">{{ t('language') }}</div>
+              <div class="settings-section-title">🌐 {{ t('language') }}</div>
               <select class="settings-select" v-model="locale" @change="setLocale(locale)">
                 <option value="zh">中文</option>
                 <option value="en">English</option>
                 <option value="vi">Tiếng Việt</option>
               </select>
             </div>
+            <!-- Grouping -->
+            <div class="settings-section">
+              <div class="settings-section-title">🗂️ {{ t('grouping') }}</div>
+              <select class="settings-select" v-model="groupingMode" @change="onGroupingChange">
+                <option value="date">{{ t('groupByDate') }}</option>
+                <option value="alpha">{{ t('groupByAlpha') }}</option>
+                <option value="none">{{ t('groupByNone') }}</option>
+              </select>
+            </div>
+            <!-- Tab visibility -->
+            <div class="settings-section">
+              <div class="settings-section-title">👁️ {{ t('tabVisibility') }}</div>
+              <div class="settings-checkbox-group settings-grid-2col">
+                <label class="settings-checkbox"><input type="checkbox" v-model="showTabAll" @change="saveTabVisibility" /> {{ t('tabAll') }}</label>
+                <label class="settings-checkbox"><input type="checkbox" v-model="showTabNotes" @change="saveTabVisibility" /> {{ t('tabNotes') }}</label>
+                <label class="settings-checkbox"><input type="checkbox" v-model="showTabTodos" @change="saveTabVisibility" /> {{ t('tabTodos') }}</label>
+                <label class="settings-checkbox"><input type="checkbox" v-model="showTabTimeline" @change="saveTabVisibility" /> {{ t('tabTimeline') }}</label>
+                <label class="settings-checkbox"><input type="checkbox" v-model="showTabTrash" @change="saveTabVisibility" /> 🗑 {{ t('trash') }}</label>
+                <label class="settings-checkbox"><input type="checkbox" v-model="showTabCalendar" @change="saveTabVisibility" /> {{ t('tabCalendar') }}</label>
+                <label class="settings-checkbox"><input type="checkbox" v-model="showTabBoard" @change="saveTabVisibility" /> {{ t('tabBoard') }}</label>
+              </div>
+            </div>
+            <!-- Color Scheme -->
+            <div class="settings-section">
+              <div class="settings-section-title">🎨 {{ t('colorScheme') }}</div>
+              <select class="settings-select" v-model="colorScheme" @change="setColorScheme(colorScheme)">
+                <option value="default">{{ t('schemeDefault') }}</option>
+                <option value="windows">{{ t('schemeWindows') }}</option>
+                <option value="morandi">{{ t('schemeMorandi') }}</option>
+              </select>
+            </div>
             <!-- Shortcut -->
             <div class="settings-section">
-              <div class="settings-section-title">{{ t('shortcut') }}</div>
+              <div class="settings-section-title">⌨️ {{ t('shortcut') }}</div>
               <div class="shortcut-row">
                 <span class="shortcut-current">{{ currentShortcut }}</span>
                 <button v-if="!recordingShortcut" class="btn btn-secondary" @click="startRecording">{{ t('recordShortcut') }}</button>
@@ -3873,27 +3904,9 @@ const App = {
                 <button class="btn btn-secondary" @click="recordingShortcut = false">{{ t('cancel') }}</button>
               </div>
             </div>
-            <!-- Grouping -->
-            <div class="settings-section">
-              <div class="settings-section-title">{{ t('grouping') }}</div>
-              <select class="settings-select" v-model="groupingMode" @change="onGroupingChange">
-                <option value="date">{{ t('groupByDate') }}</option>
-                <option value="alpha">{{ t('groupByAlpha') }}</option>
-                <option value="none">{{ t('groupByNone') }}</option>
-              </select>
-            </div>
-            <!-- Color Scheme -->
-            <div class="settings-section">
-              <div class="settings-section-title">{{ t('colorScheme') }}</div>
-              <select class="settings-select" v-model="colorScheme" @change="setColorScheme(colorScheme)">
-                <option value="default">{{ t('schemeDefault') }}</option>
-                <option value="windows">{{ t('schemeWindows') }}</option>
-                <option value="morandi">{{ t('schemeMorandi') }}</option>
-              </select>
-            </div>
             <!-- Pet (StickyTodo Desktop Pet, Stage 1+2 + Stage 5+6) -->
             <div class="settings-section">
-              <div class="settings-section-title">{{ t('petTitle') }}</div>
+              <div class="settings-section-title">🐾 {{ t('petTitle') }}</div>
               <div class="settings-row">
                 <label class="settings-checkbox">
                   <input type="checkbox" v-model="petEnabled" @change="onPetEnabledChange" />
@@ -3934,43 +3947,47 @@ const App = {
               <div class="settings-row">
                 <button class="btn btn-secondary btn-danger" @click="resetPet">{{ t('petReset') }}</button>
               </div>
-              <div v-if="petState" class="pet-stats">
-                <div class="pet-stat-row">
-                  <span class="pet-stat-label">{{ t('petLevel') }}</span>
-                  <div class="pet-stat-bar"></div>
-                  <span class="pet-stat-value">Lv {{ petState.level || 1 }}</span>
+              <!-- FIX layout: pet stats 折叠（查看时展开），避免和基础设置混在一起 -->
+              <details class="settings-collapsible" v-if="petState">
+                <summary>📊 {{ t('petStats') || 'Stats' }}</summary>
+                <div class="pet-stats">
+                  <div class="pet-stat-row">
+                    <span class="pet-stat-label">{{ t('petLevel') }}</span>
+                    <div class="pet-stat-bar"></div>
+                    <span class="pet-stat-value">Lv {{ petState.level || 1 }}</span>
+                  </div>
+                  <div class="pet-stat-row">
+                    <span class="pet-stat-label">{{ t('petXp') }}</span>
+                    <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: petXpPercent + '%' }"></div></div>
+                    <span class="pet-stat-value">{{ petState.xp || 0 }} / {{ petXpToNext }}</span>
+                  </div>
+                  <div class="pet-stat-row">
+                    <span class="pet-stat-label">{{ t('petMood') }}</span>
+                    <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: (petState.mood || 0) + '%' }"></div></div>
+                    <span class="pet-stat-value">{{ petState.mood || 0 }}</span>
+                  </div>
+                  <div class="pet-stat-row">
+                    <span class="pet-stat-label">{{ t('petEnergy') }}</span>
+                    <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: (petState.energy || 0) + '%' }"></div></div>
+                    <span class="pet-stat-value">{{ petState.energy || 0 }}</span>
+                  </div>
+                  <div class="pet-stat-row">
+                    <span class="pet-stat-label">{{ t('petIntimacy') }}</span>
+                    <div class="pet-stat-bar"></div>
+                    <span class="pet-stat-value">{{ petState.intimacy || 0 }}</span>
+                  </div>
+                  <div class="pet-stat-row">
+                    <span class="pet-stat-label">{{ t('petStreak') }}</span>
+                    <div class="pet-stat-bar"></div>
+                    <span class="pet-stat-value">{{ petState.daily_streak || 0 }}</span>
+                  </div>
                 </div>
-                <div class="pet-stat-row">
-                  <span class="pet-stat-label">{{ t('petXp') }}</span>
-                  <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: petXpPercent + '%' }"></div></div>
-                  <span class="pet-stat-value">{{ petState.xp || 0 }} / {{ petXpToNext }}</span>
-                </div>
-                <div class="pet-stat-row">
-                  <span class="pet-stat-label">{{ t('petMood') }}</span>
-                  <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: (petState.mood || 0) + '%' }"></div></div>
-                  <span class="pet-stat-value">{{ petState.mood || 0 }}</span>
-                </div>
-                <div class="pet-stat-row">
-                  <span class="pet-stat-label">{{ t('petEnergy') }}</span>
-                  <div class="pet-stat-bar"><div class="pet-stat-bar-fill" :style="{ width: (petState.energy || 0) + '%' }"></div></div>
-                  <span class="pet-stat-value">{{ petState.energy || 0 }}</span>
-                </div>
-                <div class="pet-stat-row">
-                  <span class="pet-stat-label">{{ t('petIntimacy') }}</span>
-                  <div class="pet-stat-bar"></div>
-                  <span class="pet-stat-value">{{ petState.intimacy || 0 }}</span>
-                </div>
-                <div class="pet-stat-row">
-                  <span class="pet-stat-label">{{ t('petStreak') }}</span>
-                  <div class="pet-stat-bar"></div>
-                  <span class="pet-stat-value">{{ petState.daily_streak || 0 }}</span>
-                </div>
-              </div>
-              <!-- FIX B8: petState 为 null 时（首次打开设置、异步加载中、或 DB 无宠物记录）占位 -->
+              </details>
+              <!-- FIX B8: petState 为 null 时占位 -->
               <div v-else class="pet-stats-loading">{{ t('statsNoData') }}</div>
-              <!-- Stage 5.2: Multi-pet list + create + breed -->
-              <div class="settings-subsection">
-                <div class="settings-section-subtitle">{{ t('petMulti') }}</div>
+              <!-- Stage 5.2: Multi-pet list + create + breed — 折叠让基础设置更整洁 -->
+              <details class="settings-collapsible settings-subsection">
+                <summary class="settings-section-subtitle">🐾 {{ t('petMulti') }}</summary>
                 <div class="settings-row settings-row-inline">
                   <label class="settings-label">{{ t('petCreatePack') }}</label>
                   <select class="settings-select" v-model="newPetPackId">
@@ -3997,24 +4014,11 @@ const App = {
                   <button class="btn btn-secondary" @click="breedFirstPair">{{ t('petBreed') }}</button>
                   <span class="settings-hint">{{ t('petBreedHint') }}</span>
                 </div>
-              </div>
-            </div>
-            <!-- Tab visibility -->
-            <div class="settings-section">
-              <div class="settings-section-title">{{ t('tabVisibility') }}</div>
-              <div class="settings-checkbox-group settings-grid-2col">
-                <label class="settings-checkbox"><input type="checkbox" v-model="showTabAll" @change="saveTabVisibility" /> {{ t('tabAll') }}</label>
-                <label class="settings-checkbox"><input type="checkbox" v-model="showTabNotes" @change="saveTabVisibility" /> {{ t('tabNotes') }}</label>
-                <label class="settings-checkbox"><input type="checkbox" v-model="showTabTodos" @change="saveTabVisibility" /> {{ t('tabTodos') }}</label>
-                <label class="settings-checkbox"><input type="checkbox" v-model="showTabTimeline" @change="saveTabVisibility" /> {{ t('tabTimeline') }}</label>
-                <label class="settings-checkbox"><input type="checkbox" v-model="showTabTrash" @change="saveTabVisibility" /> 🗑 {{ t('trash') }}</label>
-                <label class="settings-checkbox"><input type="checkbox" v-model="showTabCalendar" @change="saveTabVisibility" /> {{ t('tabCalendar') }}</label>
-                <label class="settings-checkbox"><input type="checkbox" v-model="showTabBoard" @change="saveTabVisibility" /> {{ t('tabBoard') }}</label>
-              </div>
+              </details>
             </div>
             <!-- Backup -->
             <div class="settings-section">
-              <div class="settings-section-title">{{ t('backup') }}</div>
+              <div class="settings-section-title">💾 {{ t('backup') }}</div>
               <div class="backup-info">{{ t('backupAuto') }}</div>
               <button class="btn btn-primary btn-block" @click="doManualBackup">{{ t('backupNow') }}</button>
               <details v-if="backupList.length > 0" class="settings-collapsible">
@@ -4036,7 +4040,7 @@ const App = {
             </div>
             <!-- Import Data -->
             <div class="settings-section">
-              <div class="settings-section-title">{{ t('importData') }}</div>
+              <div class="settings-section-title">📥 {{ t('importData') }}</div>
               <div class="import-row">
                 <label class="import-label btn btn-secondary" for="import-file-input">{{ t('importSelect') }}</label>
                 <input type="file" id="import-file-input" accept=".json" style="display:none" @change="onImportFile" />
@@ -4045,7 +4049,7 @@ const App = {
             </div>
             <!-- Statistics -->
             <div class="settings-section stats-section">
-              <div class="settings-section-title">{{ t('stats') }}</div>
+              <div class="settings-section-title">📊 {{ t('stats') }}</div>
               <div v-if="stats.totalTodos === 0" class="stats-empty">{{ t('statsNoData') }}</div>
               <details v-else class="settings-collapsible">
                 <summary>{{ t('statsThisWeek') }}: {{ stats.weekCompleted }}/{{ stats.weekTotal }} · {{ t('statsThisMonth') }}: {{ stats.monthCompleted }}/{{ stats.monthTotal }}</summary>

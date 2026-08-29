@@ -526,10 +526,10 @@ var currentTheme = 'dark';     // Stage 6.2: data-theme applied to container
     resizeState.dialogue = true;
     resizeState._dialogueW = winW;
     if (api.pet && api.pet._resizeWindow) api.pet._resizeWindow(winW, winH);
-    // Auto-hide after 3s (matches the CSS animation duration).
+    // Auto-hide after 6s (enough time to read the dialogue text).
     dialogueHideTimer = setTimeout(function () {
       hideDialogue();
-    }, 3000);
+    }, 6000);
     // Optional: log to console for debugging.
     if (typeof console !== 'undefined' && console.log) {
       console.log('[pet] ' + (tier || 'auto') + ': ' + text);
