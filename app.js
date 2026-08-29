@@ -2667,6 +2667,20 @@ const TodoEditor = {
           </div>
 
           <div class="option-section">
+            <label class="option-label">{{ t('color') }}</label>
+            <div class="color-row">
+              <button
+                v-for="color in NOTE_COLORS"
+                :key="color.value"
+                class="color-dot"
+                :class="{ selected: selectedColor === color.value }"
+                :style="{ backgroundColor: 'var(--color-note-' + color.value + ')' }"
+                @click="selectedColor = color.value"
+              ></button>
+            </div>
+          </div>
+
+          <div class="option-section">
             <label class="option-label">🔁 {{ t('repeat') }}</label>
             <div class="repeat-options">
               <button v-for="opt in repeatOptions" :key="opt.value" class="priority-btn" :class="{ selected: selectedRepeat === opt.value, 'priority-medium': true }" @click="selectedRepeat = opt.value">{{ opt.label }}</button>
@@ -2691,6 +2705,10 @@ const TodoEditor = {
       
       <div class="editor-footer">
         <button class="btn btn-secondary" @click="handleCancel">{{ t('cancel') }}</button>
+        <button v-if="todo && todo.id" class="btn btn-secondary" @click="duplicateTodo" :title="t('duplicateNote')">\uD83D\uDD17</button>
+        <button v-if="todo && todo.id" class="btn btn-secondary" @click="exportTodoImage" :title="t('shareImage')">\uD83D\uDCF7</button>
+        <button v-if="todo && todo.id" class="btn btn-secondary" @click="exportTodoMarkdown" :title="t('exportMD')">\uD83D\uDCDD</button>
+        <button v-if="todo && todo.id" class="btn btn-secondary" @click="exportTodoPDF" :title="t('exportPDF')">\uD83D\uDCC4</button>
         <button class="btn btn-primary" @click="handleSave" :disabled="!canSave">{{ t('save') }}</button>
       </div>
     </div>
@@ -2706,6 +2724,7 @@ const TodoEditor = {
   setup(props, { emit }) {
     const title = ref('');
     const selectedPriority = ref('medium');
+    const selectedColor = ref(NOTE_COLORS[0].value);
     const dueDate = ref('');
     const category = ref('');
     const selectedNoteId = ref(null);
@@ -2735,6 +2754,7 @@ const TodoEditor = {
       if (props.todo) {
         title.value = props.todo.title || '';
         selectedPriority.value = props.todo.priority || 'medium';
+      selectedColor.value = getColorName(props.todo.color) || NOTE_COLORS[0].value;
         dueDate.value = props.todo.due_date ? props.todo.due_date.slice(0, 16) : '';
         category.value = props.todo.category || '';
         selectedNoteId.value = props.todo.note_id || null;
@@ -2840,7 +2860,8 @@ const TodoEditor = {
         category: category.value.trim(),
         note_id: selectedNoteId.value,
         tags: todoTags.value.join(','),
-        repeat_type: selectedRepeat.value
+        repeat_type: selectedRepeat.value,
+        color: selectedColor.value
       };
 
       try {
@@ -2863,10 +2884,62 @@ const TodoEditor = {
     const handleCancel = () => {
       emit('close');
     };
+
+    // 待办复制 + 导出（与便笺共享 IPC）
+    const duplicateTodo = async () => {
+      if (!props.todo || !props.todo.id) return;
+      try {
+        await window.electronAPI.todos.create({
+          title: (title.value || '') + ' ' + t('duplicateSuffix'),
+          priority: selectedPriority.value,
+          due_date: dueDate.value || null,
+          color: selectedColor.value
+        });
+        emit('saved');
+      } catch (e) { console.error('duplicateTodo failed:', e); }
+    };
+
+    const exportTodoImage = async () => {
+      if (!props.todo || !props.todo.id) return;
+      try {
+        var r = await window.electronAPI.note.exportImage({
+          title: title.value,
+          content: '<p>' + t('priority') + ': ' + selectedPriority.value + '</p><p>' + t('dueDate') + ': ' + (dueDate.value || '\u2014') + '</p><p>' + t('category') + ': ' + (category.value || '\u2014') + '</p>',
+          color: selectedColor.value
+        });
+        alert(t('imageSaved') + '\n' + (r && r.path ? r.path : 'Desktop'));
+      } catch (_) {}
+    };
+
+    const exportTodoMarkdown = async () => {
+      if (!props.todo || !props.todo.id) return;
+      try {
+        var r = await window.electronAPI.note.exportMarkdown({
+          title: title.value,
+          content: '<p>' + t('priority') + ': ' + selectedPriority.value + '</p><p>' + t('dueDate') + ': ' + (dueDate.value || '\u2014') + '</p><p>' + t('category') + ': ' + (category.value || '\u2014') + '</p>',
+          color: selectedColor.value
+        });
+        alert((t('exportDone') || 'Exported') + '\n' + (r && r.path ? r.path : 'Desktop'));
+      } catch (_) {}
+    };
+
+    const exportTodoPDF = async () => {
+      if (!props.todo || !props.todo.id) return;
+      try {
+        var r = await window.electronAPI.note.exportPDF({
+          title: title.value,
+          content: '<p>' + t('priority') + ': ' + selectedPriority.value + '</p><p>' + t('dueDate') + ': ' + (dueDate.value || '\u2014') + '</p><p>' + t('category') + ': ' + (category.value || '\u2014') + '</p>',
+          color: selectedColor.value
+        });
+        alert((t('exportDone') || 'Exported') + '\n' + (r && r.path ? r.path : 'Desktop'));
+      } catch (_) {}
+    };
     
     return {
       title,
       selectedPriority,
+      selectedColor,
+      NOTE_COLORS,
       dueDate,
       category,
       selectedNoteId,
@@ -2875,6 +2948,10 @@ const TodoEditor = {
       canSave,
       handleSave,
       handleCancel,
+      duplicateTodo,
+      exportTodoImage,
+      exportTodoMarkdown,
+      exportTodoPDF,
       todoTags,
       showTodoTagInput,
       newTodoTagValue,
