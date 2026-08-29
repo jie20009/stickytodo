@@ -3685,10 +3685,10 @@ const App = {
                 <div style="position:relative" @click.stop>
                   <button class="add-btn" @click="showAddNoteMenu = !showAddNoteMenu" :title="t('addNote')" :aria-label="t('addNote')" :aria-expanded="showAddNoteMenu" aria-haspopup="true">+</button>
                   <div v-if="showAddNoteMenu" class="add-dropdown" @mouseleave="showAddNoteMenu = false" role="menu">
-                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; createNoteInWindow()" role="menuitem">🪟 {{ t('tabNotes') }}{{ t('addInWindow') }}</button>
-                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; createTodoInWindow()" role="menuitem">🪟 {{ t('tabTodos') }}{{ t('addInWindow') }}</button>
-                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; currentTab = 'notes'; showNewNoteEditor()" role="menuitem">📝 {{ t('tabNotes') }}{{ t('addInSidebar') }}</button>
-                    <button class="add-dropdown-item" @click="showAddNoteMenu = false; currentTab = 'todos'; showNewTodoEditor()" role="menuitem">✓ {{ t('tabTodos') }}{{ t('addInSidebar') }}</button>
+          <button class="add-dropdown-item" @click="showAddNoteMenu = false; createTodoInWindow()" role="menuitem">🪟 {{ t('tabTodos') }}{{ t('addInWindow') }}</button>
+          <button class="add-dropdown-item" @click="showAddNoteMenu = false; createNoteInWindow()" role="menuitem">🪟 {{ t('tabNotes') }}{{ t('addInWindow') }}</button>
+          <button class="add-dropdown-item" @click="showAddNoteMenu = false; currentTab = 'todos'; showNewTodoEditor()" role="menuitem">✓ {{ t('tabTodos') }}{{ t('addInSidebar') }}</button>
+          <button class="add-dropdown-item" @click="showAddNoteMenu = false; currentTab = 'notes'; showNewNoteEditor()" role="menuitem">📝 {{ t('tabNotes') }}{{ t('addInSidebar') }}</button>
                   </div>
                 </div>
               </div>
